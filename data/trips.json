@@ -1,0 +1,54 @@
+[
+  {
+    "id": "trip-highlands-2026",
+    "title": "Highlands Road Trip",
+    "country": "Scotland",
+    "city": "Glencoe",
+    "startDate": "2026-10-04",
+    "endDate": "2026-10-09",
+    "lat": 56.6826,
+    "lng": -5.1023,
+    "summary": "Rainy mountain roads, tiny cafés, and our favorite views of the trip.",
+    "notes": "Add the real story here later — favorite meals, funny moments, lodging, and a daily timeline.",
+    "cover": "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?auto=format&fit=crop&w=1600&q=85",
+    "photos": [
+      "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?auto=format&fit=crop&w=1200&q=85",
+      "https://images.unsplash.com/photo-1520769669658-f07657f5a307?auto=format&fit=crop&w=1200&q=85"
+    ],
+    "featured": true
+  },
+  {
+    "id": "trip-london-2026",
+    "title": "London Weekend",
+    "country": "England",
+    "city": "London",
+    "startDate": "2026-09-18",
+    "endDate": "2026-09-20",
+    "lat": 51.5072,
+    "lng": -0.1276,
+    "summary": "Markets, museums, late trains, and learning our way around the city.",
+    "notes": "Add restaurant links, tickets, neighborhood notes, and favorite photos.",
+    "cover": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1600&q=85",
+    "photos": [
+      "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=85"
+    ],
+    "featured": false
+  },
+  {
+    "id": "trip-arizona-2026",
+    "title": "Arizona Goodbye Tour",
+    "country": "United States",
+    "city": "Sedona",
+    "startDate": "2026-08-22",
+    "endDate": "2026-08-24",
+    "lat": 34.8697,
+    "lng": -111.761,
+    "summary": "A final desert weekend before the move — red rocks, sunsets, and favorite stops.",
+    "notes": "A sample trip you can replace in the admin page.",
+    "cover": "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1600&q=85",
+    "photos": [
+      "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1200&q=85"
+    ],
+    "featured": false
+  }
+]

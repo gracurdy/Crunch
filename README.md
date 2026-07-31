@@ -1,10 +1,15 @@
-# Our Atlas — mobile-first travel log starter
+# Our Atlas — family travel log
 
-A dependency-free front-end prototype inspired by the supplied travel app references.
+Mobile-first travel log hosted on GitHub Pages:
+**https://gracurdy.github.io/Crunch/**
 
-## Open it
+Trips and uploaded photos are saved **into this GitHub repository** (not only in the browser). That is why photos can persist on the live site.
 
-Double-click `index.html`, or run a simple local server:
+## Why photos used to disappear
+
+The first version tried to keep photos in `localStorage`. Browsers only allow a few MB there, so photo uploads often failed silently. Photos are now written to `assets/photos/` and trip data to `data/trips.json` via the GitHub API.
+
+## Open it locally
 
 ```bash
 python3 -m http.server 8080
@@ -12,66 +17,45 @@ python3 -m http.server 8080
 
 Then open `http://localhost:8080`.
 
-## Included
+## Add a trip (login)
 
-- Mobile-first responsive design
-- Family-facing home page
-- Trip cards and trip detail modal
-- Search by destination, notes, or date
-- Interactive stylized world map with clickable pins and zoom controls
-- Combined photo gallery
-- Admin page for adding trips, notes, dates, coordinates, cover images, and photo uploads
-- Local browser persistence via `localStorage`
+1. Open the site → **Add**
+2. Enter the **site password** (default: `OurAtlas`)
+3. Enter a **GitHub personal access token** with write access to this repo
+4. Fill in the trip form, choose photos, click **Save trip to GitHub**
+5. Wait about a minute for GitHub Pages to rebuild, then refresh
 
-## Important prototype limitation
+Your token is kept in session storage for this browser tab only. It is not stored in the repo.
 
-The admin page stores data only in the browser currently being used. It is not a secure or shared backend. Before deployment, replace the localStorage functions in `app.js` with Supabase or Firebase.
+### Create the GitHub token
 
-## Suggested Supabase tables
+1. GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**
+2. Resource owner: your account
+3. Repository access: only **Crunch**
+4. Permissions → Repository permissions → **Contents: Read and write**
+5. Generate the token and paste it into the login form
 
-### trips
-- id (uuid)
-- title
-- country
-- city
-- start_date
-- end_date
-- latitude
-- longitude
-- summary
-- notes
-- cover_url
-- featured
-- created_at
+Classic tokens also work if they have the `repo` scope.
 
-### photos
-- id (uuid)
-- trip_id (foreign key)
-- storage_path
-- caption
-- taken_at
-- latitude
-- longitude
-- sort_order
+### Change the site password
 
-### places
-- id (uuid)
-- trip_id
-- name
-- google_place_id
-- category
-- latitude
-- longitude
-- notes
-- rating
+Default password is `OurAtlas`. To change it:
 
-## Best next Cursor upgrades
+```bash
+echo -n 'YourNewPassword' | shasum -a 256
+```
 
-1. Convert to React or Next.js.
-2. Add Supabase Auth so only Grace and invited editors can change content.
-3. Use Supabase Storage for original photos and thumbnails.
-4. Replace the stylized SVG map with Mapbox, MapLibre, or Google Maps.
-5. Read EXIF coordinates and capture dates from uploaded photos.
-6. Add country polygons that highlight automatically based on trip coordinates.
-7. Add public/private visibility per trip.
-8. Add shareable trip URLs and optional family access code.
+Put the hash into `config.js` as `adminPasswordHash`, then commit.
+
+## What gets saved on GitHub
+
+| Path | Purpose |
+|------|---------|
+| `data/trips.json` | All trip titles, notes, dates, coordinates, photo paths |
+| `assets/photos/<trip-id>/` | Uploaded photos (resized JPEGs) |
+
+Anyone can view the public Pages site. Only someone with the password **and** a write token can change content.
+
+## Important security note
+
+This is a simple family setup. The site password hash is visible in the frontend, so the real protection is your GitHub token. Do not use a powerful token that can access other private repos. Prefer a fine-grained token limited to **Crunch**.

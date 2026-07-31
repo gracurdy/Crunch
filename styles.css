@@ -152,7 +152,31 @@ h1 { font-family: "Playfair Display", serif; font-size: clamp(3.4rem, 13vw, 7.2r
 .admin-item p { margin:3px 0 0; color:var(--muted); font-size:.8rem; }
 .danger { border:0; border-radius:10px; padding:8px 10px; background:#fff0f0; color:#a33434; }
 .note { color:var(--muted); font-size:.83rem; line-height:1.5; }
+.note code, .admin-field code { font-size:.78rem; background:rgba(20,28,42,.06); padding:1px 5px; border-radius:6px; }
 .empty { text-align:center; padding:34px 16px; color:var(--muted); }
+.optional { font-weight:500; text-transform:none; letter-spacing:0; color:var(--muted); }
+
+.status-banner {
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 14px;
+  background: #e8eef5; color: #243041; font-size: .92rem;
+}
+.status-banner.success { background: #dff3ea; color: #174b39; }
+.status-banner.error { background: #fde8e8; color: #8a2b2b; }
+.status-banner.info { background: #e8eef5; color: #243041; }
+
+.login-section { max-width: 560px; }
+.login-panel { display:grid; gap:14px; }
+.form-error { margin:0; color:#8a2b2b; font-size:.9rem; }
+
+.upload-box { gap:14px; }
+.upload-previews {
+  display:flex; flex-wrap:wrap; gap:8px; justify-content:center; width:100%;
+}
+.upload-thumb {
+  width:72px; height:72px; object-fit:cover; border-radius:12px;
+  border:1px solid rgba(20,28,42,.1);
+}
+button:disabled { opacity:.55; cursor:wait; transform:none; }
 
 @media (max-width: 760px) {
   .page { padding:12px 12px 26px; }
