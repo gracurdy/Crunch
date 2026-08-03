@@ -5,7 +5,7 @@ export const CONFIG = {
   tripsPath: 'data/trips.json',
   photosDir: 'assets/photos',
   // Password-locked save credential. Create/update with:
-  //   PASSWORD='YourPassword' TOKEN='your_token' node scripts/seal-secret.mjs
+  PASSWORD='clarity' TOKEN='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' node scripts/seal-secret.mjs
   authSalt: '',
   authIv: '',
   sealedSecret: ''
