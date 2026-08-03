@@ -1,15 +1,8 @@
-# Our Atlas — family travel log
+# Our Atlas
 
-Mobile-first travel log hosted on GitHub Pages:
-**https://gracurdy.github.io/Crunch/**
+Family travel log: **https://gracurdy.github.io/Crunch/**
 
-Trips and uploaded photos are saved **into this GitHub repository** (not only in the browser). That is why photos can persist on the live site.
-
-## Why photos used to disappear
-
-The first version tried to keep photos in `localStorage`. Browsers only allow a few MB there, so photo uploads often failed silently. Photos are now written to `assets/photos/` and trip data to `data/trips.json` via the GitHub API.
-
-## Open it locally
+## Open locally
 
 ```bash
 python3 -m http.server 8080
@@ -17,45 +10,35 @@ python3 -m http.server 8080
 
 Then open `http://localhost:8080`.
 
-## Add a trip (login)
+## Sign in on the site
 
-1. Open the site → **Add**
-2. Enter the **site password** (default: `OurAtlas`)
-3. Enter a **GitHub personal access token** with write access to this repo
-4. Fill in the trip form, choose photos, click **Save trip to GitHub**
-5. Wait about a minute for GitHub Pages to rebuild, then refresh
+The website login is **password only**. Visitors never see setup details.
 
-Your token is kept in session storage for this browser tab only. It is not stored in the repo.
+Default password after you finish the one-time setup below: whatever password you choose when sealing (example: `OurAtlas`).
 
-### Create the GitHub token
+## One-time owner setup (required for saving)
 
-1. GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**
-2. Resource owner: your account
-3. Repository access: only **Crunch**
-4. Permissions → Repository permissions → **Contents: Read and write**
-5. Generate the token and paste it into the login form
+The live site is static, so saving trips/photos needs a write credential locked behind your password. You set this once; the site only asks for the password.
 
-Classic tokens also work if they have the `repo` scope.
-
-### Change the site password
-
-Default password is `OurAtlas`. To change it:
+1. Create a fine-grained personal access token for **only this repository**, with **Contents: Read and write**.
+2. From the repo root, run:
 
 ```bash
-echo -n 'YourNewPassword' | shasum -a 256
+PASSWORD='OurAtlas' TOKEN='paste_your_token_here' node scripts/seal-secret.mjs
 ```
 
-Put the hash into `config.js` as `adminPasswordHash`, then commit.
+3. Commit and push the updated `config.js`.
+4. On the live site, open **Add**, enter that same password, and save trips as usual.
 
-## What gets saved on GitHub
+To change the password later, run the same command again with the new password and token, then commit `config.js`.
+
+## What gets saved
 
 | Path | Purpose |
 |------|---------|
-| `data/trips.json` | All trip titles, notes, dates, coordinates, photo paths |
-| `assets/photos/<trip-id>/` | Uploaded photos (resized JPEGs) |
+| `data/trips.json` | Trip details and photo paths |
+| `assets/photos/<trip-id>/` | Uploaded photos |
 
-Anyone can view the public Pages site. Only someone with the password **and** a write token can change content.
+## Security note
 
-## Important security note
-
-This is a simple family setup. The site password hash is visible in the frontend, so the real protection is your GitHub token. Do not use a powerful token that can access other private repos. Prefer a fine-grained token limited to **Crunch**.
+Anyone who knows the password can unlock the sealed write credential in the browser. Use a password only trusted people know, and keep the token limited to this repo.

@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 
 const API = 'https://api.github.com';
 
-async function gh(path, token, options = {}) {
+async function api(path, token, options = {}) {
   const res = await fetch(`${API}${path}`, {
     ...options,
     headers: {
@@ -29,22 +29,20 @@ async function gh(path, token, options = {}) {
   return res.json();
 }
 
-export async function verifyToken(token) {
-  const user = await gh('/user', token);
-  await gh(`/repos/${CONFIG.owner}/${CONFIG.repo}`, token);
-  return user;
+export async function verifyWriteAccess(token) {
+  await api(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.tripsPath}`, token);
 }
 
 /** files: [{ path, content, encoding: 'utf-8' | 'base64' }] */
 export async function commitFiles(token, message, files) {
   const { owner, repo, branch } = CONFIG;
-  const ref = await gh(`/repos/${owner}/${repo}/git/ref/heads/${branch}`, token);
+  const ref = await api(`/repos/${owner}/${repo}/git/ref/heads/${branch}`, token);
   const latestCommitSha = ref.object.sha;
-  const latestCommit = await gh(`/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, token);
+  const latestCommit = await api(`/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, token);
 
   const treeItems = [];
   for (const file of files) {
-    const blob = await gh(`/repos/${owner}/${repo}/git/blobs`, token, {
+    const blob = await api(`/repos/${owner}/${repo}/git/blobs`, token, {
       method: 'POST',
       body: JSON.stringify({
         content: file.content,
@@ -59,7 +57,7 @@ export async function commitFiles(token, message, files) {
     });
   }
 
-  const tree = await gh(`/repos/${owner}/${repo}/git/trees`, token, {
+  const tree = await api(`/repos/${owner}/${repo}/git/trees`, token, {
     method: 'POST',
     body: JSON.stringify({
       base_tree: latestCommit.tree.sha,
@@ -67,7 +65,7 @@ export async function commitFiles(token, message, files) {
     })
   });
 
-  const commit = await gh(`/repos/${owner}/${repo}/git/commits`, token, {
+  const commit = await api(`/repos/${owner}/${repo}/git/commits`, token, {
     method: 'POST',
     body: JSON.stringify({
       message,
@@ -76,7 +74,7 @@ export async function commitFiles(token, message, files) {
     })
   });
 
-  await gh(`/repos/${owner}/${repo}/git/refs/heads/${branch}`, token, {
+  await api(`/repos/${owner}/${repo}/git/refs/heads/${branch}`, token, {
     method: 'PATCH',
     body: JSON.stringify({ sha: commit.sha })
   });
