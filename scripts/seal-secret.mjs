@@ -21,7 +21,27 @@ const token = process.env.TOKEN || '';
 
 if (!password || !token) {
   console.error('Set PASSWORD and TOKEN environment variables.');
-  console.error("Example: PASSWORD='OurAtlas' TOKEN='ghp_...' node scripts/seal-secret.mjs");
+  console.error("Example: PASSWORD='clarity' TOKEN='github_pat_...' node scripts/seal-secret.mjs");
+  console.error('Run this in Terminal. Do not paste it into config.js.');
+  process.exit(1);
+}
+
+if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+  console.error('TOKEN does not look like a GitHub personal access token.');
+  process.exit(1);
+}
+
+const probe = await fetch('https://api.github.com/repos/gracurdy/Crunch/contents/data/trips.json', {
+  headers: {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${token}`,
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+});
+if (!probe.ok) {
+  const body = await probe.text();
+  console.error(`Token check failed (${probe.status}). Create a new fine-grained token for Crunch with Contents: Read and write.`);
+  console.error(body.slice(0, 300));
   process.exit(1);
 }
 

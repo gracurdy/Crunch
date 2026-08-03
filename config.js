@@ -4,8 +4,10 @@ export const CONFIG = {
   branch: 'main',
   tripsPath: 'data/trips.json',
   photosDir: 'assets/photos',
-  // Password-locked save credential. Create/update with:
-  PASSWORD='clarity' TOKEN='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' node scripts/seal-secret.mjs
+  // Do NOT paste commands or tokens into this file.
+  // In Terminal, from this folder, run:
+  //   PASSWORD='your-password' TOKEN='your-token' node scripts/seal-secret.mjs
+  // Then commit the updated authSalt / authIv / sealedSecret values below.
   authSalt: '',
   authIv: '',
   sealedSecret: ''
