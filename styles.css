@@ -164,8 +164,78 @@ h1 { font-family: "Playfair Display", serif; font-size: clamp(3.4rem, 13vw, 7.2r
 .status-banner.error { background: #fde8e8; color: #8a2b2b; }
 .status-banner.info { background: #e8eef5; color: #243041; }
 
-.login-section { max-width: 560px; }
-.login-panel { display:grid; gap:14px; }
+.login-shell { padding-bottom: 0; min-height: 100vh; }
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 18px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(217,233,255,.95) 0, transparent 34%),
+    radial-gradient(circle at 88% 78%, rgba(220,239,233,.9) 0, transparent 30%),
+    linear-gradient(160deg, #edf3fb, #e7eee8 55%, #f4f7fb);
+}
+.login-card {
+  width: min(400px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 28px 24px 22px;
+  border-radius: 28px;
+  background: rgba(255,255,255,.88);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow: 0 24px 60px rgba(28, 42, 66, .12);
+  backdrop-filter: blur(18px);
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.login-brand strong {
+  display: block;
+  font-family: "Playfair Display", serif;
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+.login-brand span {
+  display: block;
+  color: var(--muted);
+  font-size: .92rem;
+  margin-top: 2px;
+}
+.login-field {
+  display: grid;
+  gap: 7px;
+}
+.login-field span {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.login-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 14px;
+  background: white;
+  outline: none;
+}
+.login-field input:focus {
+  border-color: rgba(31,111,95,.45);
+  box-shadow: 0 0 0 3px rgba(31,111,95,.12);
+}
+.login-submit { width: 100%; padding: 14px 18px; border-radius: 16px; }
+.text-link {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 4px;
+  font-size: .92rem;
+}
+.text-link:hover { color: var(--text); transform: none; }
 .form-error { margin:0; color:#8a2b2b; font-size:.9rem; }
 
 .upload-box { gap:14px; }
