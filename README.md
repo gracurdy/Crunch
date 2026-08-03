@@ -12,33 +12,32 @@ Then open `http://localhost:8080`.
 
 ## Sign in on the site
 
-The website login is **password only**. Visitors never see setup details.
+The website login is **password only**.
 
-Default password after you finish the one-time setup below: whatever password you choose when sealing (example: `OurAtlas`).
+## One-time owner setup (required)
 
-## One-time owner setup (required for saving)
+Saving trips needs a one-time Terminal setup. Do **not** paste the command or token into `config.js`.
 
-The live site is static, so saving trips/photos needs a write credential locked behind your password. You set this once; the site only asks for the password.
+### 1. Create a fine-grained token
+GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
 
-1. Create a fine-grained personal access token for **only this repository**, with **Contents: Read and write**.
-2. From the repo root, run:
+- Repository access: only **Crunch**
+- Permissions → **Contents: Read and write**
+- Copy the token once
+
+### 2. Run this in Terminal (from the repo folder)
 
 ```bash
-PASSWORD='OurAtlas' TOKEN='paste_your_token_here' node scripts/seal-secret.mjs
+PASSWORD='clarity' TOKEN='paste_your_new_token_here' node scripts/seal-secret.mjs
 ```
 
-3. Commit and push the updated `config.js`.
-4. On the live site, open **Add**, enter that same password, and save trips as usual.
+Use your real password and a **new** token. This rewrites `authSalt`, `authIv`, and `sealedSecret` in `config.js`.
 
-To change the password later, run the same command again with the new password and token, then commit `config.js`.
+### 3. Commit and push `config.js`
 
-## What gets saved
+After GitHub Pages updates, sign in on the site with that same password only.
 
-| Path | Purpose |
-|------|---------|
-| `data/trips.json` | Trip details and photo paths |
-| `assets/photos/<trip-id>/` | Uploaded photos |
-
-## Security note
-
-Anyone who knows the password can unlock the sealed write credential in the browser. Use a password only trusted people know, and keep the token limited to this repo.
+### If login still fails
+- Make sure `sealedSecret` in `config.js` is a long value, not `''`
+- Create a brand-new token and run the Terminal command again
+- If a token was ever pasted into `config.js` or a chat, revoke it on GitHub and make a new one

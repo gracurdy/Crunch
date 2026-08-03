@@ -318,6 +318,9 @@ function bind() {
     state.loginError = '';
     render();
     try {
+      if (!CONFIG.sealedSecret || !CONFIG.authSalt || !CONFIG.authIv) {
+        throw new Error('Sign-in is not set up yet. Ask the site owner to finish setup.');
+      }
       const secret = await unsealSecret(password, CONFIG);
       await verifyWriteAccess(secret);
       sessionStorage.setItem(SESSION_KEY, secret);
@@ -326,8 +329,10 @@ function bind() {
       state.busy = false;
       clearStatus();
       route('admin');
-    } catch {
-      state.loginError = 'Wrong password.';
+    } catch (err) {
+      const msg = String(err?.message || '');
+      if (msg.includes('not set up')) state.loginError = msg;
+      else state.loginError = 'Wrong password.';
       state.busy = false;
       render();
     }
