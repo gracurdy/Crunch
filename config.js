@@ -1,12 +1,12 @@
-// Site settings for GitHub Pages persistence.
-// Live site: https://gracurdy.github.io/Crunch/
 export const CONFIG = {
   owner: 'gracurdy',
   repo: 'Crunch',
   branch: 'main',
   tripsPath: 'data/trips.json',
   photosDir: 'assets/photos',
-  // SHA-256 of the admin password. Default password: OurAtlas
-  // Change it: echo -n 'YourNewPassword' | shasum -a 256
-  adminPasswordHash: 'e1521f847ded692a4912b6a9919b331a813f37e76be646c778f63449380640e6'
+  // Password-locked save credential. Create/update with:
+  //   PASSWORD='YourPassword' TOKEN='your_token' node scripts/seal-secret.mjs
+  authSalt: 'viruQO0c5eiKd2UORjHB/Q==',
+  authIv: '+YSt09u7YhjhaNT0',
+  sealedSecret: 'SNMlkZBBFOtwT8QXLv4XM0pCmHILYBY6mNnBKT0aKL/CuXZUzj6446zyNzbpGg=='
 };

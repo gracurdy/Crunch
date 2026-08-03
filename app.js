@@ -1,7 +1,8 @@
 import { CONFIG } from './config.js';
-import { commitFiles, loadTripsFromRepo, verifyToken } from './github.js';
+import { unsealSecret } from './auth.js';
+import { commitFiles, loadTripsFromRepo, verifyWriteAccess } from './persist.js';
 
-const TOKEN_KEY = 'our-atlas-github-token';
+const SESSION_KEY = 'our-atlas-session';
 const AUTH_KEY = 'our-atlas-authed';
 
 const state = {
@@ -11,7 +12,7 @@ const state = {
   query: '',
   date: '',
   mapZoom: 1,
-  authed: sessionStorage.getItem(AUTH_KEY) === '1' && !!sessionStorage.getItem(TOKEN_KEY),
+  authed: sessionStorage.getItem(AUTH_KEY) === '1' && !!sessionStorage.getItem(SESSION_KEY),
   status: '',
   statusType: '',
   busy: false,
@@ -20,8 +21,8 @@ const state = {
 
 let pendingPhotos = []; // { base64, ext, preview }
 
-function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY) || '';
+function getSessionSecret() {
+  return sessionStorage.getItem(SESSION_KEY) || '';
 }
 
 function setStatus(message, type = 'info') {
@@ -32,12 +33,6 @@ function setStatus(message, type = 'info') {
 function clearStatus() {
   state.status = '';
   state.statusType = '';
-}
-
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function fmtDate(value) {
@@ -80,6 +75,7 @@ window.addEventListener('hashchange', () => {
 });
 
 function nav() {
+  if (state.view === 'login') return '';
   const items = [
     ['home', '⌂', 'Trips'],
     ['map', '◎', 'Map'],
@@ -89,7 +85,7 @@ function nav() {
   return `<nav class="bottom-nav">${items
     .map(
       ([v, i, l]) =>
-        `<button class="nav-btn ${state.view === v || (state.view === 'login' && v === 'login') ? 'active' : ''}" data-route="${v}"><span>${i}</span><span>${l}</span></button>`
+        `<button class="nav-btn ${state.view === v ? 'active' : ''}" data-route="${v}"><span>${i}</span><span>${l}</span></button>`
     )
     .join('')}</nav>`;
 }
@@ -154,22 +150,19 @@ function mapView() {
 function photosView() {
   const all = state.trips.flatMap(t => (t.photos || []).map((src, i) => ({ src, trip: t, index: i })));
   return `<main class="page">${topbar('Every trip, all together')}${statusBanner()}
-    <section class="section"><div class="section-head"><div><h2>Photo map</h2><p>Browse memories by trip. Uploaded photos are saved into the GitHub repo.</p></div><button class="primary-btn" data-route="${state.authed ? 'admin' : 'login'}">Upload photos</button></div>
+    <section class="section"><div class="section-head"><div><h2>Photo map</h2><p>Browse memories by trip.</p></div><button class="primary-btn" data-route="${state.authed ? 'admin' : 'login'}">Upload photos</button></div>
     <div class="photo-grid">${all.length ? all.map(p => `<button class="photo-tile" data-trip="${p.trip.id}"><img src="${p.src}" alt="${p.trip.title} photo" loading="lazy"><span>${p.trip.city}</span></button>`).join('') : '<div class="empty">No photos yet.</div>'}</div></section></main>`;
 }
 
 function loginView() {
-  return `<main class="page">${topbar('Editor sign-in')}${statusBanner()}
-    <section class="section login-section">
-      <div class="section-head"><div><h2>Log in to add trips</h2><p>Visitors can browse freely. Saving to GitHub needs your password and a GitHub token.</p></div></div>
-      <form class="panel login-panel form-grid" id="login-form">
-        <div class="admin-field"><label>Site password</label><input name="password" type="password" required autocomplete="current-password" placeholder="Default: OurAtlas"></div>
-        <div class="admin-field"><label>GitHub personal access token</label><input name="token" type="password" required autocomplete="off" placeholder="ghp_… or github_pat_…"></div>
-        <p class="note">Create a fine-grained token for the <strong>${CONFIG.owner}/${CONFIG.repo}</strong> repo with <strong>Contents: Read and write</strong>. The token stays in this browser tab only (session storage) and is never committed to the site.</p>
-        ${state.loginError ? `<p class="form-error">${state.loginError}</p>` : ''}
-        <button class="primary-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Checking…' : 'Log in'}</button>
-      </form>
-    </section>
+  return `<main class="login-screen">
+    <form class="login-card" id="login-form">
+      <div class="login-brand"><div class="brand-mark">OA</div><div><strong>Our Atlas</strong><span>Sign in</span></div></div>
+      <label class="login-field"><span>Password</span><input name="password" type="password" required autocomplete="current-password" autofocus></label>
+      ${state.loginError ? `<p class="form-error">${state.loginError}</p>` : ''}
+      <button class="primary-btn login-submit" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Signing in…' : 'Sign in'}</button>
+      <button type="button" class="text-link" data-route="home">Back to trips</button>
+    </form>
   </main>`;
 }
 
@@ -178,7 +171,7 @@ function adminView() {
     .map(p => `<img class="upload-thumb" src="${p.preview}" alt="Selected photo preview">`)
     .join('');
   return `<main class="page">${topbar('Private editing area')}${statusBanner()}
-    <section class="section"><div class="section-head"><div><h2>Add a memory</h2><p>Trips and photos are committed to GitHub so they show up on the live GitHub Pages site.</p></div>
+    <section class="section"><div class="section-head"><div><h2>Add a memory</h2><p>New trips and photos appear on the site after you save.</p></div>
       <button class="soft-btn" id="logout-btn">Log out</button></div>
     <div class="admin-layout"><form class="panel form-grid" id="trip-form">
       <div class="form-grid two"><div class="admin-field"><label>Trip title</label><input name="title" required placeholder="Scotland road trip"></div><div class="admin-field"><label>Country</label><input name="country" required placeholder="Scotland"></div></div>
@@ -188,12 +181,12 @@ function adminView() {
       <div class="admin-field"><label>Short summary</label><textarea name="summary" placeholder="The description family sees on the trip card."></textarea></div>
       <div class="admin-field"><label>Trip notes</label><textarea name="notes" placeholder="Favorite meals, funny moments, lodging, itinerary, links, costs…"></textarea></div>
       <div class="admin-field"><label>Cover photo URL <span class="optional">(optional if you upload photos)</span></label><input name="cover" placeholder="Paste an image URL, or upload photos below"></div>
-      <div class="upload-box" id="upload-box"><div><strong>Tap to choose photos</strong><p class="note">Photos are resized, then saved into <code>assets/photos/</code> on GitHub. They are no longer stuck in browser storage.</p><span id="upload-count">${pendingPhotos.length ? `${pendingPhotos.length} photo${pendingPhotos.length === 1 ? '' : 's'} ready` : 'No photos selected'}</span></div>
+      <div class="upload-box" id="upload-box"><div><strong>Tap to choose photos</strong><p class="note">Photos are resized before saving.</p><span id="upload-count">${pendingPhotos.length ? `${pendingPhotos.length} photo${pendingPhotos.length === 1 ? '' : 's'} ready` : 'No photos selected'}</span></div>
         ${previews ? `<div class="upload-previews">${previews}</div>` : ''}
       </div>
-      <button class="primary-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving to GitHub…' : 'Save trip to GitHub'}</button>
+      <button class="primary-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving…' : 'Save trip'}</button>
     </form>
-    <aside class="panel"><h3>Saved trips</h3><p class="note">Deleting removes the trip from <code>data/trips.json</code> on GitHub. Photo files may remain in the repo.</p><div class="admin-list">${state.trips
+    <aside class="panel"><h3>Saved trips</h3><p class="note">Delete a trip when you want it removed from the site.</p><div class="admin-list">${state.trips
       .map(
         t =>
           `<div class="admin-item"><img src="${t.cover}" alt=""><div><strong>${t.title}</strong><p>${t.city}, ${t.country} · ${fmtDate(t.startDate)} · ${(t.photos || []).length} photos</p></div><button class="danger" data-delete="${t.id}" ${state.busy ? 'disabled' : ''}>Delete</button></div>`
@@ -213,7 +206,8 @@ function tripModal(t) {
 function render() {
   const app = document.querySelector('#app');
   const views = { home: homeView, map: mapView, photos: photosView, admin: adminView, login: loginView };
-  app.innerHTML = `<div class="app-shell">${(views[state.view] || homeView)()}${nav()}${tripModal(state.selectedTrip)}</div>`;
+  const shellClass = state.view === 'login' ? 'app-shell login-shell' : 'app-shell';
+  app.innerHTML = `<div class="${shellClass}">${(views[state.view] || homeView)()}${nav()}${tripModal(state.selectedTrip)}</div>`;
   bind();
 }
 
@@ -242,8 +236,8 @@ async function fileToCompressedJpeg(file) {
 }
 
 async function persistTrips(nextTrips, files, message) {
-  const token = getToken();
-  if (!token) throw new Error('You are logged out. Please log in again.');
+  const secret = getSessionSecret();
+  if (!secret) throw new Error('You are logged out. Please sign in again.');
 
   const payload = [
     {
@@ -254,7 +248,7 @@ async function persistTrips(nextTrips, files, message) {
     ...files
   ];
 
-  await commitFiles(token, message, payload);
+  await commitFiles(secret, message, payload);
   state.trips = nextTrips;
 }
 
@@ -307,7 +301,7 @@ function bind() {
   });
 
   document.querySelector('#logout-btn')?.addEventListener('click', () => {
-    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(AUTH_KEY);
     state.authed = false;
     pendingPhotos = [];
@@ -320,24 +314,20 @@ function bind() {
     if (state.busy) return;
     const fd = new FormData(e.currentTarget);
     const password = String(fd.get('password') || '');
-    const token = String(fd.get('token') || '').trim();
     state.busy = true;
     state.loginError = '';
     render();
     try {
-      const hash = await sha256(password);
-      if (hash !== CONFIG.adminPasswordHash) {
-        throw new Error('Wrong site password.');
-      }
-      await verifyToken(token);
-      sessionStorage.setItem(TOKEN_KEY, token);
+      const secret = await unsealSecret(password, CONFIG);
+      await verifyWriteAccess(secret);
+      sessionStorage.setItem(SESSION_KEY, secret);
       sessionStorage.setItem(AUTH_KEY, '1');
       state.authed = true;
       state.busy = false;
-      setStatus('Logged in. You can add trips and photos to GitHub.', 'success');
+      clearStatus();
       route('admin');
-    } catch (err) {
-      state.loginError = err.message || 'Login failed.';
+    } catch {
+      state.loginError = 'Wrong password.';
       state.busy = false;
       render();
     }
@@ -411,13 +401,13 @@ function bind() {
 
     const nextTrips = [trip, ...state.trips];
     state.busy = true;
-    setStatus('Saving trip and photos to GitHub…', 'info');
+    setStatus('Saving…', 'info');
     render();
     try {
       await persistTrips(nextTrips, photoFiles, `Add trip: ${trip.title}`);
       pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
       pendingPhotos = [];
-      setStatus('Saved to GitHub. The live site usually updates within a minute.', 'success');
+      setStatus('Saved. Refresh in a minute if the new trip is not visible yet.', 'success');
       state.view = 'home';
       location.hash = 'home';
     } catch (err) {
@@ -430,17 +420,17 @@ function bind() {
   document.querySelectorAll('[data-delete]').forEach(btn =>
     btn.addEventListener('click', async () => {
       if (state.busy) return;
-      if (!confirm('Delete this trip from GitHub?')) return;
+      if (!confirm('Delete this trip?')) return;
       const id = btn.dataset.delete;
       const nextTrips = state.trips.filter(t => t.id !== id);
       const title = state.trips.find(t => t.id === id)?.title || 'trip';
       state.busy = true;
-      setStatus('Deleting trip on GitHub…', 'info');
+      setStatus('Deleting…', 'info');
       render();
       try {
         await persistTrips(nextTrips, [], `Delete trip: ${title}`);
         if (state.selectedTrip?.id === id) state.selectedTrip = null;
-        setStatus('Trip removed from GitHub.', 'success');
+        setStatus('Trip deleted.', 'success');
       } catch (err) {
         setStatus(err.message || 'Delete failed.', 'error');
       }
@@ -454,7 +444,7 @@ async function init() {
   try {
     state.trips = await loadTripsFromRepo();
   } catch {
-    setStatus('Could not load trips from the repo yet. Showing an empty list.', 'error');
+    setStatus('Could not load trips yet.', 'error');
     state.trips = [];
   }
 
