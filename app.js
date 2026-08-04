@@ -1,6 +1,7 @@
 import { CONFIG } from './config.js';
 import { unsealSecret } from './auth.js';
 import { commitFiles, loadTripsFromRepo, verifyWriteAccess } from './persist.js';
+import { attachGlobe, flyHome, parkGlobe, zoomGlobe } from './map-globe.js';
 
 const SESSION_KEY = 'our-atlas-session';
 const AUTH_KEY = 'our-atlas-authed';
@@ -27,7 +28,6 @@ const state = {
   selectedTrip: null,
   query: '',
   date: '',
-  mapZoom: 1,
   authed: sessionStorage.getItem(AUTH_KEY) === '1' && !!sessionStorage.getItem(SESSION_KEY),
   status: '',
   statusType: '',
@@ -192,29 +192,17 @@ function homeView() {
 }
 
 function mapView() {
-  const pins = state.trips
-    .map(t => {
-      const x = ((Number(t.lng) + 180) / 360) * 1000;
-      const y = ((90 - Number(t.lat)) / 180) * 500;
-      return `<g class="pin" data-trip="${t.id}"><circle cx="${x}" cy="${y}" r="11" fill="#f4d64e" stroke="#fff" stroke-width="5"/><circle cx="${x}" cy="${y}" r="3" fill="#2b2b2b"/></g>`;
-    })
-    .join('');
-  const preview = state.selectedTrip || state.trips[0];
+  const preview = state.selectedTrip || state.trips.find(t => Number(t.lat) || Number(t.lng)) || state.trips[0];
+  const mappable = state.trips.filter(t => {
+    const lat = Number(t.lat);
+    const lng = Number(t.lng);
+    return Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+  }).length;
   return `<main class="page">${topbar('Tap a pin to open a trip')}${statusBanner()}
-    <section class="section"><div class="section-head"><div><h2>Places we’ve been</h2><p>Zoom from the world view into individual memories.</p></div></div>
-    <div class="map-shell"><div class="map-toolbar"><span>${state.trips.length} saved locations</span><button class="soft-btn" id="reset-map">Reset view</button></div><div class="map-stage">
-      <svg class="world-map" id="world-map" viewBox="0 0 1000 500" style="transform:scale(${state.mapZoom})" aria-label="Interactive travel map">
-        <rect width="1000" height="500" fill="transparent"/>
-        <path class="visited" d="M80 118L145 73l91 18 64 54-26 48-72 25-23 70-59-28-35-64z"/>
-        <path d="M286 318l55-34 45 27 20 74-22 77-44 20-25-53z"/>
-        <path class="visited" d="M468 90l52-22 83 18 42 35-28 27-58-10-20 42-50-18-20-35z"/>
-        <path d="M525 181l75-27 66 43-5 74-36 66-44-19-13-71-46-20z"/>
-        <path d="M638 92l116-21 127 43 56 54-39 65-102-3-66 31-48-50-67-22z"/>
-        <path d="M786 341l67-30 70 18 20 53-47 52-80-14-38-43z"/>
-        ${pins}
-      </svg>
-      ${preview ? `<button class="map-card" data-trip="${preview.id}"><h3>${preview.title}</h3><p>${preview.city}, ${preview.country} · ${fmtDate(preview.startDate)}</p></button>` : ''}
-      <div class="map-controls"><button id="zoom-in">＋</button><button id="zoom-out">−</button></div>
+    <section class="section"><div class="section-head"><div><h2>Places we’ve been</h2><p>Spin the globe, zoom in, and tap a pin to open a memory.</p></div></div>
+    <div class="map-shell"><div class="map-toolbar"><span>${mappable} mapped location${mappable === 1 ? '' : 's'}</span><button class="soft-btn" id="reset-map">Reset view</button></div><div class="map-stage" id="map-stage">
+      ${preview ? `<button class="map-card" data-trip="${preview.id}"><h3>${escAttr(preview.title)}</h3><p>${escAttr(preview.city)}, ${escAttr(preview.country)} · ${fmtDate(preview.startDate)}</p></button>` : ''}
+      <div class="map-controls"><button type="button" id="zoom-in" aria-label="Zoom in">＋</button><button type="button" id="zoom-out" aria-label="Zoom out">−</button></div>
     </div></div></section></main>`;
 }
 
@@ -287,6 +275,22 @@ function render() {
   const shellClass = state.view === 'login' ? 'app-shell login-shell' : 'app-shell';
   app.innerHTML = `<div class="${shellClass}">${(views[state.view] || homeView)()}${nav()}${tripModal(state.selectedTrip)}</div>`;
   bind();
+  if (state.view === 'map') {
+    attachGlobe({
+      stage: document.querySelector('#map-stage'),
+      trips: state.trips,
+      ionToken: CONFIG.cesiumIonToken || '',
+      selectedTripId: state.selectedTrip?.id || null,
+      onSelect: tripId => {
+        const trip = state.trips.find(t => t.id === tripId);
+        if (!trip) return;
+        state.selectedTrip = trip;
+        render();
+      }
+    });
+  } else {
+    parkGlobe();
+  }
 }
 
 async function fileToCompressedJpeg(file) {
@@ -365,18 +369,9 @@ function bind() {
     state.date = '';
     render();
   });
-  document.querySelector('#zoom-in')?.addEventListener('click', () => {
-    state.mapZoom = Math.min(3, state.mapZoom + 0.35);
-    render();
-  });
-  document.querySelector('#zoom-out')?.addEventListener('click', () => {
-    state.mapZoom = Math.max(1, state.mapZoom - 0.35);
-    render();
-  });
-  document.querySelector('#reset-map')?.addEventListener('click', () => {
-    state.mapZoom = 1;
-    render();
-  });
+  document.querySelector('#zoom-in')?.addEventListener('click', () => zoomGlobe(1));
+  document.querySelector('#zoom-out')?.addEventListener('click', () => zoomGlobe(-1));
+  document.querySelector('#reset-map')?.addEventListener('click', () => flyHome(state.trips, true));
 
   document.querySelector('#logout-btn')?.addEventListener('click', () => {
     sessionStorage.removeItem(SESSION_KEY);
