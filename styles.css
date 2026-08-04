@@ -150,6 +150,11 @@ h1 { font-family: "Playfair Display", serif; font-size: clamp(3.4rem, 13vw, 7.2r
 .admin-item { display:grid; grid-template-columns:72px 1fr auto; gap:12px; align-items:center; padding:10px; background:white; border-radius:16px; }
 .admin-item img { width:72px; height:60px; object-fit:cover; border-radius:12px; }
 .admin-item p { margin:3px 0 0; color:var(--muted); font-size:.8rem; }
+.admin-item-actions { display:flex; flex-direction:column; gap:6px; }
+.admin-item-actions .edit-btn,
+.admin-item-actions .danger { border-radius:10px; padding:8px 10px; }
+.admin-item-actions .edit-btn { box-shadow:none; background:#eef3f7; }
+.form-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .danger { border:0; border-radius:10px; padding:8px 10px; background:#fff0f0; color:#a33434; }
 .note { color:var(--muted); font-size:.83rem; line-height:1.5; }
 .note code, .admin-field code { font-size:.78rem; background:rgba(20,28,42,.06); padding:1px 5px; border-radius:6px; }
