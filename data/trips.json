@@ -1,5 +1,30 @@
 [
   {
+    "id": "6cfa652c-5317-497c-96ae-f0e348e002cc",
+    "title": "Bartlett Lake Camping",
+    "country": "USA",
+    "city": "Cave Creek",
+    "startDate": "2026-07-31",
+    "endDate": "2026-08-01",
+    "lat": 0,
+    "lng": 0,
+    "summary": "",
+    "notes": "",
+    "cover": "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/01.jpg",
+    "photos": [
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/01.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/02.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/03.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/04.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/05.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/06.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/07.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/08.jpg",
+      "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/09.jpg"
+    ],
+    "featured": false
+  },
+  {
     "id": "trip-highlands-2026",
     "title": "Highlands Road Trip",
     "country": "Scotland",
