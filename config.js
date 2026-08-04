@@ -4,6 +4,8 @@ export const CONFIG = {
   branch: 'main',
   tripsPath: 'data/trips.json',
   photosDir: 'assets/photos',
+  // Optional Cesium ion token for Cesium World assets. Leave blank to use free satellite tiles.
+  cesiumIonToken: '',
   // Password-locked save credential. Create/update with:
   //   PASSWORD='YourPassword' TOKEN='your_token' node scripts/seal-secret.mjs
   authSalt: 'JdgywGQeJf3QdEWLwznW4w==',
