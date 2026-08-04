@@ -5,6 +5,22 @@ import { commitFiles, loadTripsFromRepo, verifyWriteAccess } from './persist.js'
 const SESSION_KEY = 'our-atlas-session';
 const AUTH_KEY = 'our-atlas-authed';
 
+function emptyDraft() {
+  return {
+    title: '',
+    country: '',
+    city: '',
+    featured: 'false',
+    startDate: '',
+    endDate: '',
+    lat: '',
+    lng: '',
+    summary: '',
+    notes: '',
+    cover: ''
+  };
+}
+
 const state = {
   view: location.hash.replace('#', '') || 'home',
   trips: [],
@@ -16,7 +32,9 @@ const state = {
   status: '',
   statusType: '',
   busy: false,
-  loginError: ''
+  loginError: '',
+  editingId: null,
+  draft: emptyDraft()
 };
 
 let pendingPhotos = []; // { base64, ext, preview }
@@ -33,6 +51,59 @@ function setStatus(message, type = 'info') {
 function clearStatus() {
   state.status = '';
   state.statusType = '';
+}
+
+function escAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
+function captureDraftFromForm(form = document.querySelector('#trip-form')) {
+  if (!form) return;
+  const fd = new FormData(form);
+  state.draft = {
+    title: String(fd.get('title') || ''),
+    country: String(fd.get('country') || ''),
+    city: String(fd.get('city') || ''),
+    featured: String(fd.get('featured') || 'false'),
+    startDate: String(fd.get('startDate') || ''),
+    endDate: String(fd.get('endDate') || ''),
+    lat: String(fd.get('lat') || ''),
+    lng: String(fd.get('lng') || ''),
+    summary: String(fd.get('summary') || ''),
+    notes: String(fd.get('notes') || ''),
+    cover: String(fd.get('cover') || '')
+  };
+}
+
+function resetEditor() {
+  state.editingId = null;
+  state.draft = emptyDraft();
+  pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
+  pendingPhotos = [];
+}
+
+function startEditing(trip) {
+  state.editingId = trip.id;
+  state.draft = {
+    title: trip.title || '',
+    country: trip.country || '',
+    city: trip.city || '',
+    featured: trip.featured ? 'true' : 'false',
+    startDate: trip.startDate || '',
+    endDate: trip.endDate || '',
+    lat: trip.lat === 0 || trip.lat ? String(trip.lat) : '',
+    lng: trip.lng === 0 || trip.lng ? String(trip.lng) : '',
+    summary: trip.summary || '',
+    notes: trip.notes || '',
+    cover: trip.cover || ''
+  };
+  pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
+  pendingPhotos = [];
+  clearStatus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function fmtDate(value) {
@@ -167,29 +238,36 @@ function loginView() {
 }
 
 function adminView() {
+  const d = state.draft;
+  const editing = !!state.editingId;
+  const existing = editing ? state.trips.find(t => t.id === state.editingId) : null;
+  const existingCount = existing?.photos?.length || 0;
   const previews = pendingPhotos
     .map(p => `<img class="upload-thumb" src="${p.preview}" alt="Selected photo preview">`)
     .join('');
   return `<main class="page">${topbar('Private editing area')}${statusBanner()}
-    <section class="section"><div class="section-head"><div><h2>Add a memory</h2><p>New trips and photos appear on the site after you save.</p></div>
+    <section class="section"><div class="section-head"><div><h2>${editing ? 'Edit trip' : 'Add a memory'}</h2><p>${editing ? 'Update the details, then save. New photos are added to the ones already saved.' : 'New trips and photos appear on the site after you save.'}</p></div>
       <button class="soft-btn" id="logout-btn">Log out</button></div>
     <div class="admin-layout"><form class="panel form-grid" id="trip-form">
-      <div class="form-grid two"><div class="admin-field"><label>Trip title</label><input name="title" required placeholder="Scotland road trip"></div><div class="admin-field"><label>Country</label><input name="country" required placeholder="Scotland"></div></div>
-      <div class="form-grid two"><div class="admin-field"><label>City / region</label><input name="city" placeholder="Glencoe"></div><div class="admin-field"><label>Featured trip</label><select name="featured"><option value="false">No</option><option value="true">Yes</option></select></div></div>
-      <div class="form-grid two"><div class="admin-field"><label>Start date</label><input name="startDate" type="date" required></div><div class="admin-field"><label>End date</label><input name="endDate" type="date"></div></div>
-      <div class="form-grid two"><div class="admin-field"><label>Latitude</label><input name="lat" type="number" step="any" placeholder="56.68"></div><div class="admin-field"><label>Longitude</label><input name="lng" type="number" step="any" placeholder="-5.10"></div></div>
-      <div class="admin-field"><label>Short summary</label><textarea name="summary" placeholder="The description family sees on the trip card."></textarea></div>
-      <div class="admin-field"><label>Trip notes</label><textarea name="notes" placeholder="Favorite meals, funny moments, lodging, itinerary, links, costs…"></textarea></div>
-      <div class="admin-field"><label>Cover photo URL <span class="optional">(optional if you upload photos)</span></label><input name="cover" placeholder="Paste an image URL, or upload photos below"></div>
-      <div class="upload-box" id="upload-box"><div><strong>Tap to choose photos</strong><p class="note">Photos are resized before saving.</p><span id="upload-count">${pendingPhotos.length ? `${pendingPhotos.length} photo${pendingPhotos.length === 1 ? '' : 's'} ready` : 'No photos selected'}</span></div>
+      <div class="form-grid two"><div class="admin-field"><label>Trip title</label><input name="title" required placeholder="Scotland road trip" value="${escAttr(d.title)}"></div><div class="admin-field"><label>Country</label><input name="country" required placeholder="Scotland" value="${escAttr(d.country)}"></div></div>
+      <div class="form-grid two"><div class="admin-field"><label>City / region</label><input name="city" placeholder="Glencoe" value="${escAttr(d.city)}"></div><div class="admin-field"><label>Featured trip</label><select name="featured"><option value="false" ${d.featured !== 'true' ? 'selected' : ''}>No</option><option value="true" ${d.featured === 'true' ? 'selected' : ''}>Yes</option></select></div></div>
+      <div class="form-grid two"><div class="admin-field"><label>Start date</label><input name="startDate" type="date" required value="${escAttr(d.startDate)}"></div><div class="admin-field"><label>End date</label><input name="endDate" type="date" value="${escAttr(d.endDate)}"></div></div>
+      <div class="form-grid two"><div class="admin-field"><label>Latitude</label><input name="lat" type="number" step="any" placeholder="56.68" value="${escAttr(d.lat)}"></div><div class="admin-field"><label>Longitude</label><input name="lng" type="number" step="any" placeholder="-5.10" value="${escAttr(d.lng)}"></div></div>
+      <div class="admin-field"><label>Short summary</label><textarea name="summary" placeholder="The description family sees on the trip card.">${escAttr(d.summary)}</textarea></div>
+      <div class="admin-field"><label>Trip notes</label><textarea name="notes" placeholder="Favorite meals, funny moments, lodging, itinerary, links, costs…">${escAttr(d.notes)}</textarea></div>
+      <div class="admin-field"><label>Cover photo URL <span class="optional">(optional if you upload photos)</span></label><input name="cover" placeholder="Paste an image URL, or upload photos below" value="${escAttr(d.cover)}"></div>
+      <div class="upload-box" id="upload-box"><div><strong>Tap to choose photos</strong><p class="note">${editing && existingCount ? `${existingCount} photo${existingCount === 1 ? '' : 's'} already saved. New uploads will be added.` : 'Photos are resized before saving.'}</p><span id="upload-count">${pendingPhotos.length ? `${pendingPhotos.length} new photo${pendingPhotos.length === 1 ? '' : 's'} ready` : 'No new photos selected'}</span></div>
         ${previews ? `<div class="upload-previews">${previews}</div>` : ''}
       </div>
-      <button class="primary-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving…' : 'Save trip'}</button>
+      <div class="form-actions">
+        <button class="primary-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving…' : editing ? 'Save changes' : 'Save trip'}</button>
+        ${editing ? `<button type="button" class="soft-btn" id="cancel-edit" ${state.busy ? 'disabled' : ''}>Cancel edit</button>` : ''}
+      </div>
     </form>
-    <aside class="panel"><h3>Saved trips</h3><p class="note">Delete a trip when you want it removed from the site.</p><div class="admin-list">${state.trips
+    <aside class="panel"><h3>Saved trips</h3><p class="note">Edit a trip to change details or add more photos.</p><div class="admin-list">${state.trips
       .map(
         t =>
-          `<div class="admin-item"><img src="${t.cover}" alt=""><div><strong>${t.title}</strong><p>${t.city}, ${t.country} · ${fmtDate(t.startDate)} · ${(t.photos || []).length} photos</p></div><button class="danger" data-delete="${t.id}" ${state.busy ? 'disabled' : ''}>Delete</button></div>`
+          `<div class="admin-item"><img src="${t.cover}" alt=""><div><strong>${escAttr(t.title)}</strong><p>${escAttr(t.city)}, ${escAttr(t.country)} · ${fmtDate(t.startDate)} · ${(t.photos || []).length} photos</p></div><div class="admin-item-actions"><button class="soft-btn edit-btn" data-edit="${t.id}" ${state.busy ? 'disabled' : ''}>Edit</button><button class="danger" data-delete="${t.id}" ${state.busy ? 'disabled' : ''}>Delete</button></div></div>`
       )
       .join('')}</div></aside></div></section></main>`;
 }
@@ -304,7 +382,7 @@ function bind() {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(AUTH_KEY);
     state.authed = false;
-    pendingPhotos = [];
+    resetEditor();
     clearStatus();
     route('home');
   });
@@ -338,51 +416,88 @@ function bind() {
     }
   });
 
+  const tripForm = document.querySelector('#trip-form');
+  tripForm?.addEventListener('input', () => captureDraftFromForm(tripForm));
+  tripForm?.addEventListener('change', () => captureDraftFromForm(tripForm));
+
+  document.querySelector('#cancel-edit')?.addEventListener('click', () => {
+    resetEditor();
+    clearStatus();
+    render();
+  });
+
+  document.querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      if (state.busy) return;
+      const trip = state.trips.find(t => t.id === btn.dataset.edit);
+      if (!trip) return;
+      startEditing(trip);
+      render();
+    })
+  );
+
   document.querySelector('#upload-box')?.addEventListener('click', e => {
     if (e.target.closest('img')) return;
     document.querySelector('#photo-picker').click();
   });
 
-  document.querySelector('#photo-picker')?.addEventListener('change', async e => {
-    const files = [...e.target.files];
-    if (!files.length) return;
-    setStatus(`Preparing ${files.length} photo${files.length === 1 ? '' : 's'}…`, 'info');
-    state.busy = true;
-    render();
-    try {
-      const prepared = [];
-      for (const file of files) {
-        if (!file.type.startsWith('image/')) continue;
-        prepared.push(await fileToCompressedJpeg(file));
+  const picker = document.querySelector('#photo-picker');
+  if (picker && picker.dataset.bound !== '1') {
+    picker.dataset.bound = '1';
+    picker.addEventListener('change', async e => {
+      const files = [...e.target.files];
+      if (!files.length) return;
+      captureDraftFromForm();
+      setStatus(`Preparing ${files.length} photo${files.length === 1 ? '' : 's'}…`, 'info');
+      state.busy = true;
+      render();
+      try {
+        const prepared = [];
+        for (const file of files) {
+          if (!file.type.startsWith('image/')) continue;
+          prepared.push(await fileToCompressedJpeg(file));
+        }
+        pendingPhotos = prepared;
+        if (!prepared.length) throw new Error('No image files were selected.');
+        setStatus(`${prepared.length} photo${prepared.length === 1 ? '' : 's'} ready to save with the trip.`, 'success');
+      } catch (err) {
+        setStatus(err.message || 'Could not prepare photos.', 'error');
       }
-      pendingPhotos = prepared;
-      if (!prepared.length) throw new Error('No image files were selected.');
-      setStatus(`${prepared.length} photo${prepared.length === 1 ? '' : 's'} ready to save with the trip.`, 'success');
-    } catch (err) {
-      setStatus(err.message || 'Could not prepare photos.', 'error');
-    }
-    state.busy = false;
-    e.target.value = '';
-    render();
-  });
+      state.busy = false;
+      e.target.value = '';
+      render();
+    });
+  }
 
   document.querySelector('#trip-form')?.addEventListener('submit', async e => {
     e.preventDefault();
     if (state.busy) return;
-    const fd = new FormData(e.currentTarget);
-    const data = Object.fromEntries(fd.entries());
-    const tripId = crypto.randomUUID();
+    captureDraftFromForm(e.currentTarget);
+    const data = { ...state.draft };
+    const editing = !!state.editingId;
+    const existing = editing ? state.trips.find(t => t.id === state.editingId) : null;
+    if (editing && !existing) {
+      setStatus('That trip could not be found.', 'error');
+      resetEditor();
+      render();
+      return;
+    }
+
+    const tripId = editing ? existing.id : crypto.randomUUID();
     const photoFiles = [];
-    const photoPaths = [];
+    const newPhotoPaths = [];
+    const startIndex = editing ? existing.photos?.length || 0 : 0;
 
     pendingPhotos.forEach((photo, index) => {
-      const path = `${CONFIG.photosDir}/${tripId}/${String(index + 1).padStart(2, '0')}.${photo.ext}`;
+      const path = `${CONFIG.photosDir}/${tripId}/${String(startIndex + index + 1).padStart(2, '0')}.${photo.ext}`;
       photoFiles.push({ path, content: photo.base64, encoding: 'base64' });
-      photoPaths.push(path);
+      newPhotoPaths.push(path);
     });
 
-    const cover = data.cover || photoPaths[0] || '';
-    if (!cover) {
+    const existingPhotos = editing ? existing.photos || [] : [];
+    const photos = [...existingPhotos, ...newPhotoPaths];
+    const cover = data.cover || newPhotoPaths[0] || existing?.cover || '';
+    if (!cover && !photos.length) {
       setStatus('Add a cover URL or upload at least one photo.', 'error');
       render();
       return;
@@ -399,22 +514,31 @@ function bind() {
       lng: Number(data.lng) || 0,
       summary: data.summary || '',
       notes: data.notes || '',
-      cover,
-      photos: photoPaths.length ? photoPaths : cover ? [cover] : [],
+      cover: cover || photos[0] || '',
+      photos: photos.length ? photos : cover ? [cover] : [],
       featured: data.featured === 'true'
     };
 
-    const nextTrips = [trip, ...state.trips];
+    const nextTrips = editing
+      ? state.trips.map(t => (t.id === tripId ? trip : t))
+      : [trip, ...state.trips];
+
     state.busy = true;
     setStatus('Saving…', 'info');
     render();
     try {
-      await persistTrips(nextTrips, photoFiles, `Add trip: ${trip.title}`);
-      pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
-      pendingPhotos = [];
-      setStatus('Saved. Refresh in a minute if the new trip is not visible yet.', 'success');
-      state.view = 'home';
-      location.hash = 'home';
+      await persistTrips(nextTrips, photoFiles, `${editing ? 'Update' : 'Add'} trip: ${trip.title}`);
+      resetEditor();
+      setStatus(
+        editing
+          ? 'Changes saved. Refresh in a minute if updates are not visible yet.'
+          : 'Saved. Refresh in a minute if the new trip is not visible yet.',
+        'success'
+      );
+      if (!editing) {
+        state.view = 'home';
+        location.hash = 'home';
+      }
     } catch (err) {
       setStatus(err.message || 'Save failed.', 'error');
     }
@@ -435,6 +559,7 @@ function bind() {
       try {
         await persistTrips(nextTrips, [], `Delete trip: ${title}`);
         if (state.selectedTrip?.id === id) state.selectedTrip = null;
+        if (state.editingId === id) resetEditor();
         setStatus('Trip deleted.', 'success');
       } catch (err) {
         setStatus(err.message || 'Delete failed.', 'error');
