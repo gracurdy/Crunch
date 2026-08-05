@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import * as maplibregl from "maplibre-gl";
+import type { Map, Marker, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Trip } from "@/lib/trips";
 import { formatDate } from "@/lib/trips";
@@ -25,7 +25,7 @@ type Props = {
   mapboxToken?: string;
 };
 
-const satelliteStyle: maplibregl.StyleSpecification = {
+const satelliteStyle: StyleSpecification = {
   version: 8,
   sources: {
     esri: {
@@ -41,7 +41,7 @@ const satelliteStyle: maplibregl.StyleSpecification = {
   layers: [{ id: "esri", type: "raster", source: "esri" }],
 };
 
-function mapStyle(mapboxToken?: string): string | maplibregl.StyleSpecification {
+function mapStyle(mapboxToken?: string): string | StyleSpecification {
   if (mapboxToken) {
     return `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12?access_token=${mapboxToken}`;
   }
@@ -50,7 +50,7 @@ function mapStyle(mapboxToken?: string): string | maplibregl.StyleSpecification 
 
 export function TripMap({ trips, mapboxToken }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<Map | null>(null);
   const [selected, setSelected] = useState<Trip | null>(
     () =>
       trips.find((t) => {
@@ -73,23 +73,32 @@ export function TripMap({ trips, mapboxToken }: Props) {
     if (!containerRef.current) return;
 
     let cancelled = false;
-    let map: maplibregl.Map | null = null;
-    const markers: maplibregl.Marker[] = [];
+    let map: Map | null = null;
+    const markers: Marker[] = [];
+    let removeResize: (() => void) | undefined;
+    let removeError: (() => void) | undefined;
 
-    const start = () => {
+    void (async () => {
+      const maplibregl = await import("maplibre-gl");
+
+      if (cancelled || !containerRef.current) return;
+
       try {
         map = new maplibregl.Map({
-          container: containerRef.current!,
+          container: containerRef.current,
           style: mapStyle(mapboxToken),
           center: [-5.1, 45],
           zoom: 2.2,
         });
       } catch (err) {
-        queueMicrotask(() => {
-          if (!cancelled) {
-            setMapError(err instanceof Error ? err.message : "Could not start the map.");
-          }
-        });
+        if (!cancelled) {
+          setMapError(err instanceof Error ? err.message : "Could not start the map.");
+        }
+        return;
+      }
+
+      if (cancelled) {
+        map.remove();
         return;
       }
 
@@ -104,8 +113,12 @@ export function TripMap({ trips, mapboxToken }: Props) {
         if (!cancelled) setMapError(message);
       };
       map.on("error", onMapError);
+      removeError = () => {
+        map?.off("error", onMapError);
+      };
 
       mappable.forEach((trip) => {
+        if (!map) return;
         const el = document.createElement("button");
         el.type = "button";
         el.className = "atlas-map-pin";
@@ -121,15 +134,13 @@ export function TripMap({ trips, mapboxToken }: Props) {
           });
         });
         markers.push(
-          new maplibregl.Marker({ element: el }).setLngLat([trip.lng, trip.lat]).addTo(map!),
+          new maplibregl.Marker({ element: el }).setLngLat([trip.lng, trip.lat]).addTo(map),
         );
       });
 
       map.on("load", () => {
         if (!map || cancelled) return;
-        queueMicrotask(() => {
-          if (!cancelled) setMapError("");
-        });
+        if (!cancelled) setMapError("");
         if (mappable.length > 1) {
           const bounds = new maplibregl.LngLatBounds();
           mappable.forEach((t) => bounds.extend([t.lng, t.lat]));
@@ -143,21 +154,20 @@ export function TripMap({ trips, mapboxToken }: Props) {
 
       const onResize = () => map?.resize();
       window.addEventListener("resize", onResize);
-
-      return () => {
-        window.removeEventListener("resize", onResize);
-        map?.off("error", onMapError);
-      };
-    };
-
-    const detachListeners = start();
+      removeResize = () => window.removeEventListener("resize", onResize);
+    })();
 
     return () => {
       cancelled = true;
-      detachListeners?.();
+      removeResize?.();
+      removeError?.();
       markers.forEach((marker) => marker.remove());
-      map?.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      } else {
+        map?.remove();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapboxToken, mode]);
