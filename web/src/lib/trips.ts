@@ -1,5 +1,6 @@
 import tripsData from "@/data/trips.json";
 import { categoryLabel, type TripCategoryId } from "@/lib/categories";
+import { withBasePath } from "@/lib/paths";
 
 export type Trip = {
   id: string;
@@ -18,7 +19,15 @@ export type Trip = {
   category?: TripCategoryId | string;
 };
 
-export const trips = tripsData as Trip[];
+function localizeTrip(trip: Trip): Trip {
+  return {
+    ...trip,
+    cover: withBasePath(trip.cover),
+    photos: (trip.photos || []).map(withBasePath),
+  };
+}
+
+export const trips = (tripsData as Trip[]).map(localizeTrip);
 
 export function getTrip(id: string): Trip | undefined {
   return trips.find((t) => t.id === id);
