@@ -8,8 +8,8 @@
     "endDate": "2026-08-01",
     "lat": 33.825,
     "lng": -111.632,
-    "summary": "A lakeside overnight under desert sky — campfire light, warm wind, and nine frames that keep the weekend close.",
-    "notes": "First camping trip logged in Our Atlas. Morning coffee by the water, late swim before sunset.",
+    "summary": "A lakeside overnight under desert sky \u2014 campfire light, warm wind, and nine frames that keep the weekend close.",
+    "notes": "First camping trip logged in Project Atlas. Morning coffee by the water, late swim before sunset.",
     "cover": "/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/01.jpg",
     "photos": [
       "/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/01.jpg",
@@ -22,7 +22,8 @@
       "/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/08.jpg",
       "/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/09.jpg"
     ],
-    "featured": true
+    "featured": true,
+    "category": "together"
   },
   {
     "id": "trip-highlands-2026",
@@ -33,8 +34,8 @@
     "endDate": "2026-10-09",
     "lat": 56.6826,
     "lng": -5.1023,
-    "summary": "Rainy mountain roads, tiny cafés, and our favorite views of the trip.",
-    "notes": "Add the real story here later — favorite meals, funny moments, lodging, and a daily timeline.",
+    "summary": "Rainy mountain roads, tiny caf\u00e9s, and our favorite views of the trip.",
+    "notes": "Add the real story here later \u2014 favorite meals, funny moments, lodging, and a daily timeline.",
     "cover": "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?auto=format&fit=crop&w=1600&q=85",
     "photos": [
       "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?auto=format&fit=crop&w=1600&q=85",
@@ -42,7 +43,8 @@
       "https://images.unsplash.com/photo-1486299267070-83823f5448dd?auto=format&fit=crop&w=1600&q=85",
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=85"
     ],
-    "featured": false
+    "featured": false,
+    "category": "together"
   },
   {
     "id": "trip-london-2026",
@@ -61,7 +63,8 @@
       "https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=1600&q=85",
       "https://images.unsplash.com/photo-1486299267070-83823f5448dd?auto=format&fit=crop&w=1600&q=85"
     ],
-    "featured": false
+    "featured": false,
+    "category": "together"
   },
   {
     "id": "trip-arizona-2026",
@@ -72,7 +75,7 @@
     "endDate": "2026-08-24",
     "lat": 34.8697,
     "lng": -111.761,
-    "summary": "A final desert weekend before the move — red rocks, sunsets, and favorite stops.",
+    "summary": "A final desert weekend before the move \u2014 red rocks, sunsets, and favorite stops.",
     "notes": "A sample trip you can replace in the admin page.",
     "cover": "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1600&q=85",
     "photos": [
@@ -80,6 +83,7 @@
       "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1600&q=85",
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=85"
     ],
-    "featured": false
+    "featured": false,
+    "category": "together"
   }
 ]

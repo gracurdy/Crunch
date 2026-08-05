@@ -1,4 +1,4 @@
-# Our Atlas (Next.js)
+# Project Atlas (Next.js)
 
 Cinematic family travel log built with:
 

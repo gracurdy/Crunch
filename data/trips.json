@@ -22,7 +22,8 @@
       "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/08.jpg",
       "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/09.jpg"
     ],
-    "featured": false
+    "featured": false,
+    "category": "together"
   },
   {
     "id": "trip-highlands-2026",
@@ -33,14 +34,15 @@
     "endDate": "2026-10-09",
     "lat": 56.6826,
     "lng": -5.1023,
-    "summary": "Rainy mountain roads, tiny cafés, and our favorite views of the trip.",
-    "notes": "Add the real story here later — favorite meals, funny moments, lodging, and a daily timeline.",
+    "summary": "Rainy mountain roads, tiny caf\u00e9s, and our favorite views of the trip.",
+    "notes": "Add the real story here later \u2014 favorite meals, funny moments, lodging, and a daily timeline.",
     "cover": "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?auto=format&fit=crop&w=1600&q=85",
     "photos": [
       "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?auto=format&fit=crop&w=1200&q=85",
       "https://images.unsplash.com/photo-1520769669658-f07657f5a307?auto=format&fit=crop&w=1200&q=85"
     ],
-    "featured": true
+    "featured": true,
+    "category": "together"
   },
   {
     "id": "trip-london-2026",
@@ -57,7 +59,8 @@
     "photos": [
       "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=85"
     ],
-    "featured": false
+    "featured": false,
+    "category": "together"
   },
   {
     "id": "trip-arizona-2026",
@@ -68,12 +71,13 @@
     "endDate": "2026-08-24",
     "lat": 34.8697,
     "lng": -111.761,
-    "summary": "A final desert weekend before the move — red rocks, sunsets, and favorite stops.",
+    "summary": "A final desert weekend before the move \u2014 red rocks, sunsets, and favorite stops.",
     "notes": "A sample trip you can replace in the admin page.",
     "cover": "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1600&q=85",
     "photos": [
       "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1200&q=85"
     ],
-    "featured": false
+    "featured": false,
+    "category": "together"
   }
 ]

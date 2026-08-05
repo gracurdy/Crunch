@@ -1,4 +1,5 @@
 import tripsData from "@/data/trips.json";
+import { categoryLabel, type TripCategoryId } from "@/lib/categories";
 
 export type Trip = {
   id: string;
@@ -14,6 +15,7 @@ export type Trip = {
   cover: string;
   photos: string[];
   featured: boolean;
+  category?: TripCategoryId | string;
 };
 
 export const trips = tripsData as Trip[];
@@ -40,4 +42,8 @@ export function tripDuration(trip: Trip): number {
 
 export function getAllTripIds(): string[] {
   return trips.map((t) => t.id);
+}
+
+export function tripCategoryLabel(trip: Trip): string {
+  return categoryLabel(trip.category);
 }
