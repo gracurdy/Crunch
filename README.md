@@ -2,7 +2,21 @@
 
 Family travel log: **https://gracurdy.github.io/Crunch/**
 
-## Open locally
+## New experience (`web/`)
+
+A Next.js rebuild with cinematic trip photo scrolling (GSAP + Lenis), Motion micro-animations, a Three.js globe, and optional Mapbox.
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open a trip to see the scroll showcase. Details in [`web/README.md`](web/README.md).
+
+## Classic SPA (repo root)
+
+The current GitHub Pages site still uses the vanilla app for login/admin and the Cesium globe.
 
 ```bash
 python3 -m http.server 8080
@@ -10,7 +24,7 @@ python3 -m http.server 8080
 
 Then open `http://localhost:8080`.
 
-## Sign in on the site
+## Sign in on the classic site
 
 The website login is **password only**.
 
