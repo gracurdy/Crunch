@@ -1,6 +1,6 @@
-# Our Atlas
+# Project Atlas
 
-Family travel log: **https://gracurdy.github.io/Crunch/**
+Travel log: **https://gracurdy.github.io/Crunch/**
 
 ## Open locally
 
