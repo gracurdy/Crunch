@@ -38,13 +38,8 @@ export function TripMap({ trips, mapboxToken }: Props) {
   });
 
   useEffect(() => {
-    if (mode !== "map") return;
+    if (mode !== "map" || !mapboxToken) return;
     if (!containerRef.current || mapRef.current) return;
-
-    if (!mapboxToken) {
-      setMode("globe");
-      return;
-    }
 
     mapboxgl.accessToken = mapboxToken;
 
@@ -116,8 +111,11 @@ export function TripMap({ trips, mapboxToken }: Props) {
           </button>
           <button
             type="button"
-            onClick={() => setMode("map")}
-            className={`px-4 py-2 text-sm ${mode === "map" ? "bg-[var(--ink)] text-white" : "border border-[var(--ink)]/20"}`}
+            onClick={() => {
+              if (mapboxToken) setMode("map");
+            }}
+            disabled={!mapboxToken}
+            className={`px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${mode === "map" ? "bg-[var(--ink)] text-white" : "border border-[var(--ink)]/20"}`}
           >
             Mapbox
           </button>
@@ -125,24 +123,11 @@ export function TripMap({ trips, mapboxToken }: Props) {
       </div>
 
       <div className="relative overflow-hidden border border-[var(--ink)]/10 bg-[#d8e2e0]">
-        {mode === "globe" ? (
+        {mode === "globe" || !mapboxToken ? (
           <TripGlobe trips={trips} />
         ) : (
           <>
             <div ref={containerRef} className="h-[70vh] min-h-[420px] w-full" />
-            {!mapboxToken ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-[var(--paper)]/92 p-8 text-center">
-                <div>
-                  <p className="font-[family-name:var(--font-display)] text-2xl">
-                    Mapbox token needed
-                  </p>
-                  <p className="mt-3 max-w-md text-sm text-[var(--ink-soft)]">
-                    Set <code className="text-[var(--accent)]">NEXT_PUBLIC_MAPBOX_TOKEN</code> in{" "}
-                    <code>web/.env.local</code>, or use the Globe view.
-                  </p>
-                </div>
-              </div>
-            ) : null}
             {selected ? (
               <Link
                 href={`/trips/${selected.id}`}
