@@ -21,15 +21,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Open any trip for the Obys-inspired scroll showcase: pinned scale-up frames, parallax reveals, and a horizontal film-strip scrub.
 
-### Mapbox (optional)
+### Map
 
-Create `web/.env.local`:
+The Map page works with no API key — MapLibre + Esri satellite tiles (same imagery style as the classic Cesium map). Optional Mapbox outdoors styling:
 
 ```bash
+# web/.env.local
 NEXT_PUBLIC_MAPBOX_TOKEN=pk.your_token_here
 ```
 
-Without a token, the Map page defaults to the Three.js globe.
+Toggle **Globe** for the Three.js view with clickable pins.
 
 ### GitHub Pages static export
 
