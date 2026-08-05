@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { Trip } from "@/lib/trips";
-import { formatDate, tripDuration } from "@/lib/trips";
+import { formatDate, tripCategoryLabel, tripDuration } from "@/lib/trips";
 
 export function TripCard({ trip, index }: { trip: Trip; index: number }) {
   const featured = trip.featured || index === 0;
@@ -29,6 +29,8 @@ export function TripCard({ trip, index }: { trip: Trip; index: number }) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-5 md:p-8">
             <div className="mb-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-white/75">
+              <span>{tripCategoryLabel(trip)}</span>
+              <span>·</span>
               <span>{trip.country}</span>
               <span>·</span>
               <span>{tripDuration(trip)} days</span>

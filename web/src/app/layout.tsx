@@ -15,8 +15,8 @@ const body = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Our Atlas",
-  description: "A family travel log with cinematic trip photo showcases.",
+  title: "Project Atlas",
+  description: "Side quests, soft plans, and vibes-based game plans — a travel log with cinematic trip photo showcases.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

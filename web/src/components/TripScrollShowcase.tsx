@@ -7,7 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
 import { motion } from "motion/react";
 import type { Trip } from "@/lib/trips";
-import { formatDate, tripDuration } from "@/lib/trips";
+import { formatDate, tripCategoryLabel, tripDuration } from "@/lib/trips";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -162,7 +162,7 @@ export function TripScrollShowcase({ trip }: Props) {
               ← All trips
             </Link>
             <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/70">
-              {trip.city}, {trip.country}
+              {tripCategoryLabel(trip)} · {trip.city}, {trip.country}
             </p>
             <h1 className="max-w-[14ch] font-[family-name:var(--font-display)] text-[clamp(3.2rem,9vw,8.5rem)] leading-[0.88] text-white">
               {trip.title}

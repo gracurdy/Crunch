@@ -53,7 +53,7 @@ export function SiteNav() {
           href="/"
           className="font-[family-name:var(--font-display)] text-xl tracking-tight md:text-2xl"
         >
-          Our Atlas
+          Project Atlas
         </Link>
         <nav className="flex items-center gap-6 text-sm font-medium tracking-wide md:gap-10">
           {links.map((link) => {

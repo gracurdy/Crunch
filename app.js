@@ -6,11 +6,22 @@ import { attachGlobe, flyHome, parkGlobe, zoomGlobe } from './map-globe.js';
 const SESSION_KEY = 'our-atlas-session';
 const AUTH_KEY = 'our-atlas-authed';
 
+const TRIP_CATEGORIES = [
+  { id: 'together', label: 'Together' },
+  { id: 'grace-solo', label: 'Grace Solo Trip' },
+  { id: 'sean-solo', label: 'Sean Solo Trip' }
+];
+
+function categoryLabel(id) {
+  return TRIP_CATEGORIES.find(c => c.id === id)?.label || 'Together';
+}
+
 function emptyDraft() {
   return {
     title: '',
     country: '',
     city: '',
+    category: 'together',
     featured: 'false',
     startDate: '',
     endDate: '',
@@ -28,6 +39,7 @@ const state = {
   selectedTrip: null,
   query: '',
   date: '',
+  category: 'all',
   authed: sessionStorage.getItem(AUTH_KEY) === '1' && !!sessionStorage.getItem(SESSION_KEY),
   status: '',
   statusType: '',
@@ -67,6 +79,7 @@ function captureDraftFromForm(form = document.querySelector('#trip-form')) {
     title: String(fd.get('title') || ''),
     country: String(fd.get('country') || ''),
     city: String(fd.get('city') || ''),
+    category: String(fd.get('category') || 'together'),
     featured: String(fd.get('featured') || 'false'),
     startDate: String(fd.get('startDate') || ''),
     endDate: String(fd.get('endDate') || ''),
@@ -91,6 +104,7 @@ function startEditing(trip) {
     title: trip.title || '',
     country: trip.country || '',
     city: trip.city || '',
+    category: trip.category || 'together',
     featured: trip.featured ? 'true' : 'false',
     startDate: trip.startDate || '',
     endDate: trip.endDate || '',
@@ -121,10 +135,11 @@ function duration(t) {
 
 function filteredTrips() {
   return state.trips.filter(t => {
-    const hay = `${t.title} ${t.country} ${t.city} ${t.summary}`.toLowerCase();
+    const hay = `${t.title} ${t.country} ${t.city} ${t.summary} ${categoryLabel(t.category)}`.toLowerCase();
     const q = !state.query || hay.includes(state.query.toLowerCase());
     const d = !state.date || (t.startDate <= state.date && (t.endDate || t.startDate) >= state.date);
-    return q && d;
+    const c = state.category === 'all' || (t.category || 'together') === state.category;
+    return q && d && c;
   });
 }
 
@@ -161,11 +176,11 @@ function nav() {
     .join('')}</nav>`;
 }
 
-function topbar(sub = 'Our travels, in one place') {
+function topbar(sub = 'Side quests & soft plans') {
   const action = state.authed
     ? `<button class="icon-btn" data-route="admin" aria-label="Open admin">＋</button>`
     : `<button class="icon-btn" data-route="login" aria-label="Log in">＋</button>`;
-  return `<header class="topbar"><div class="brand"><div class="brand-mark">OA</div><div>Our Atlas<small>${sub}</small></div></div>${action}</header>`;
+  return `<header class="topbar"><div class="brand"><div class="brand-mark">PA</div><div>Project Atlas<small>${sub}</small></div></div>${action}</header>`;
 }
 
 function statusBanner() {
@@ -176,18 +191,28 @@ function statusBanner() {
 function tripCard(t, index) {
   return `<article class="trip-card ${t.featured || index === 0 ? 'featured' : ''}" data-trip="${t.id}">
     <img src="${t.cover}" alt="${t.title}" loading="lazy" />
-    <div class="trip-overlay"><div class="trip-meta"><span class="pill">${t.country}</span><span class="pill">${duration(t)} days</span><span class="pill">${fmtDate(t.startDate)}</span></div><h3>${t.title}</h3><p>${t.summary}</p></div>
+    <div class="trip-overlay"><div class="trip-meta"><span class="pill">${categoryLabel(t.category)}</span><span class="pill">${t.country}</span><span class="pill">${duration(t)} days</span><span class="pill">${fmtDate(t.startDate)}</span></div><h3>${t.title}</h3><p>${t.summary}</p></div>
   </article>`;
+}
+
+function categoryFilters() {
+  const items = [{ id: 'all', label: 'All trips' }, ...TRIP_CATEGORIES];
+  return `<div class="category-filters" role="tablist" aria-label="Trip categories">${items
+    .map(
+      c =>
+        `<button type="button" class="category-chip ${state.category === c.id ? 'active' : ''}" data-category="${c.id}">${c.label}</button>`
+    )
+    .join('')}</div>`;
 }
 
 function homeView() {
   const trips = filteredTrips();
   const photos = state.trips.reduce((n, t) => n + (t.photos?.length || 0), 0);
   return `<main class="page">${topbar()}${statusBanner()}
-    <section class="hero"><div class="hero-content"><div class="eyebrow">Grace + our favorite person</div><h1>Travel without limits.</h1><p>A private, shareable home for the places we go, the photos we take, and the little details we never want to forget.</p><div class="hero-actions"><button class="primary-btn" data-route="map">Explore the map</button><button class="soft-btn" data-route="photos">View memories</button></div></div></section>
+    <section class="hero"><div class="hero-content"><div class="eyebrow">Side quests & soft plans</div><h1>Travel without limits.</h1><p>A home for the detours worth keeping — side quests logged, memories saved, and game plans guided by the vibe.</p><div class="hero-actions"><button class="primary-btn" data-route="map">Explore the map</button><button class="soft-btn" data-route="photos">View memories</button></div></div></section>
     <section class="search-panel"><div class="field"><label>Search trips</label><input id="search-input" value="${state.query}" placeholder="Scotland, London, hiking…" /></div><div class="field"><label>Find by date</label><input id="date-input" type="date" value="${state.date}" /></div><button class="primary-btn" id="clear-search">Clear</button></section>
     <section class="stats"><div class="stat"><strong>${state.trips.length}</strong><span>Trips saved</span></div><div class="stat"><strong>${new Set(state.trips.map(t => t.country)).size}</strong><span>Countries</span></div><div class="stat"><strong>${photos}</strong><span>Photos collected</span></div></section>
-    <section class="section"><div class="section-head"><div><h2>Our trips</h2><p>Tap any trip to open its story.</p></div></div><div class="trip-grid">${trips.length ? trips.map(tripCard).join('') : '<div class="empty">No trips match that search.</div>'}</div></section>
+    <section class="section"><div class="section-head"><div><h2>Our trips</h2><p>Tap any trip to open its story.</p></div></div>${categoryFilters()}<div class="trip-grid">${trips.length ? trips.map(tripCard).join('') : '<div class="empty">No trips match that search.</div>'}</div></section>
   </main>`;
 }
 
@@ -216,7 +241,7 @@ function photosView() {
 function loginView() {
   return `<main class="login-screen">
     <form class="login-card" id="login-form">
-      <div class="login-brand"><div class="brand-mark">OA</div><div><strong>Our Atlas</strong><span>Sign in</span></div></div>
+      <div class="login-brand"><div class="brand-mark">PA</div><div><strong>Project Atlas</strong><span>Sign in</span></div></div>
       <label class="login-field"><span>Password</span><input name="password" type="password" required autocomplete="current-password" autofocus></label>
       ${state.loginError ? `<p class="form-error">${state.loginError}</p>` : ''}
       <button class="primary-btn login-submit" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Signing in…' : 'Sign in'}</button>
@@ -238,7 +263,8 @@ function adminView() {
       <button class="soft-btn" id="logout-btn">Log out</button></div>
     <div class="admin-layout"><form class="panel form-grid" id="trip-form">
       <div class="form-grid two"><div class="admin-field"><label>Trip title</label><input name="title" required placeholder="Scotland road trip" value="${escAttr(d.title)}"></div><div class="admin-field"><label>Country</label><input name="country" required placeholder="Scotland" value="${escAttr(d.country)}"></div></div>
-      <div class="form-grid two"><div class="admin-field"><label>City / region</label><input name="city" placeholder="Glencoe" value="${escAttr(d.city)}"></div><div class="admin-field"><label>Featured trip</label><select name="featured"><option value="false" ${d.featured !== 'true' ? 'selected' : ''}>No</option><option value="true" ${d.featured === 'true' ? 'selected' : ''}>Yes</option></select></div></div>
+      <div class="form-grid two"><div class="admin-field"><label>City / region</label><input name="city" placeholder="Glencoe" value="${escAttr(d.city)}"></div><div class="admin-field"><label>Category</label><select name="category">${TRIP_CATEGORIES.map(c => `<option value="${c.id}" ${d.category === c.id ? 'selected' : ''}>${c.label}</option>`).join('')}</select></div></div>
+      <div class="form-grid two"><div class="admin-field"><label>Featured trip</label><select name="featured"><option value="false" ${d.featured !== 'true' ? 'selected' : ''}>No</option><option value="true" ${d.featured === 'true' ? 'selected' : ''}>Yes</option></select></div><div class="admin-field"><label class="optional">Optional</label><p class="note" style="margin:0;padding-top:10px">Mark one trip featured to spotlight it on home.</p></div></div>
       <div class="form-grid two"><div class="admin-field"><label>Start date</label><input name="startDate" type="date" required value="${escAttr(d.startDate)}"></div><div class="admin-field"><label>End date</label><input name="endDate" type="date" value="${escAttr(d.endDate)}"></div></div>
       <div class="form-grid two"><div class="admin-field"><label>Latitude</label><input name="lat" type="number" step="any" placeholder="56.68" value="${escAttr(d.lat)}"></div><div class="admin-field"><label>Longitude</label><input name="lng" type="number" step="any" placeholder="-5.10" value="${escAttr(d.lng)}"></div></div>
       <div class="admin-field"><label>Short summary</label><textarea name="summary" placeholder="The description family sees on the trip card.">${escAttr(d.summary)}</textarea></div>
@@ -255,14 +281,14 @@ function adminView() {
     <aside class="panel"><h3>Saved trips</h3><p class="note">Edit a trip to change details or add more photos.</p><div class="admin-list">${state.trips
       .map(
         t =>
-          `<div class="admin-item"><img src="${t.cover}" alt=""><div><strong>${escAttr(t.title)}</strong><p>${escAttr(t.city)}, ${escAttr(t.country)} · ${fmtDate(t.startDate)} · ${(t.photos || []).length} photos</p></div><div class="admin-item-actions"><button class="soft-btn edit-btn" data-edit="${t.id}" ${state.busy ? 'disabled' : ''}>Edit</button><button class="danger" data-delete="${t.id}" ${state.busy ? 'disabled' : ''}>Delete</button></div></div>`
+          `<div class="admin-item"><img src="${t.cover}" alt=""><div><strong>${escAttr(t.title)}</strong><p>${escAttr(categoryLabel(t.category))} · ${escAttr(t.city)}, ${escAttr(t.country)} · ${fmtDate(t.startDate)} · ${(t.photos || []).length} photos</p></div><div class="admin-item-actions"><button class="soft-btn edit-btn" data-edit="${t.id}" ${state.busy ? 'disabled' : ''}>Edit</button><button class="danger" data-delete="${t.id}" ${state.busy ? 'disabled' : ''}>Delete</button></div></div>`
       )
       .join('')}</div></aside></div></section></main>`;
 }
 
 function tripModal(t) {
   if (!t) return '';
-  return `<div class="modal-backdrop" id="modal-backdrop"><article class="modal"><div class="close-row"><div><span class="eyebrow">${t.country}</span><h2>${t.title}</h2></div><button class="icon-btn" id="close-modal">✕</button></div><div class="modal-hero"><img src="${t.cover}" alt="${t.title}"></div><div class="trip-meta"><span class="pill" style="background:#e5ebef;color:#222">${fmtDate(t.startDate)} – ${fmtDate(t.endDate || t.startDate)}</span><span class="pill" style="background:#e5ebef;color:#222">${duration(t)} days</span><span class="pill" style="background:#e5ebef;color:#222">${t.city}</span></div><h3>About this trip</h3><p>${t.summary}</p><h3>Notes</h3><p>${t.notes || 'No notes added yet.'}</p>${
+  return `<div class="modal-backdrop" id="modal-backdrop"><article class="modal"><div class="close-row"><div><span class="eyebrow">${categoryLabel(t.category)} · ${t.country}</span><h2>${t.title}</h2></div><button class="icon-btn" id="close-modal">✕</button></div><div class="modal-hero"><img src="${t.cover}" alt="${t.title}"></div><div class="trip-meta"><span class="pill" style="background:#e5ebef;color:#222">${fmtDate(t.startDate)} – ${fmtDate(t.endDate || t.startDate)}</span><span class="pill" style="background:#e5ebef;color:#222">${duration(t)} days</span><span class="pill" style="background:#e5ebef;color:#222">${t.city}</span></div><h3>About this trip</h3><p>${t.summary}</p><h3>Notes</h3><p>${t.notes || 'No notes added yet.'}</p>${
     (t.photos || []).length
       ? `<div class="photo-grid">${t.photos.map(src => `<div class="photo-tile"><img src="${src}" alt="${t.title}"></div>`).join('')}</div>`
       : ''
@@ -367,8 +393,15 @@ function bind() {
   document.querySelector('#clear-search')?.addEventListener('click', () => {
     state.query = '';
     state.date = '';
+    state.category = 'all';
     render();
   });
+  document.querySelectorAll('[data-category]').forEach(el =>
+    el.addEventListener('click', () => {
+      state.category = el.dataset.category || 'all';
+      render();
+    })
+  );
   document.querySelector('#zoom-in')?.addEventListener('click', () => zoomGlobe(1));
   document.querySelector('#zoom-out')?.addEventListener('click', () => zoomGlobe(-1));
   document.querySelector('#reset-map')?.addEventListener('click', () => flyHome(state.trips, true));
@@ -511,6 +544,7 @@ function bind() {
       notes: data.notes || '',
       cover: cover || photos[0] || '',
       photos: photos.length ? photos : cover ? [cover] : [],
+      category: TRIP_CATEGORIES.some(c => c.id === data.category) ? data.category : 'together',
       featured: data.featured === 'true'
     };
 
