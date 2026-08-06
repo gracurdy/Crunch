@@ -32,15 +32,10 @@ NEXT_PUBLIC_MAPBOX_TOKEN=pk.your_token_here
 
 Toggle **Globe** for the Three.js view with clickable pins.
 
-### GitHub Pages static export
+## Deploy
 
-```bash
-cd web
-NEXT_PUBLIC_BASE_PATH=/Crunch npm run build
-```
+Pushing to `main` deploys this app to GitHub Pages via GitHub Actions
+(`.github/workflows/deploy-pages.yml`) with `NEXT_PUBLIC_BASE_PATH=/Crunch`.
 
-Output lands in `web/out`.
+One-time: repo **Settings → Pages → Source → GitHub Actions**.
 
-## Note on the classic SPA
-
-The original vanilla site (admin login, GitHub save, Cesium) remains at the repo root. This `web/` app is the new viewing experience with scroll-driven trip galleries. Admin/auth can be ported next.

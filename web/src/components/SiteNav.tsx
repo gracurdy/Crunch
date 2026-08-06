@@ -77,6 +77,12 @@ export function SiteNav() {
               </Link>
             );
           })}
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/classic/`}
+            className="opacity-55 transition-opacity hover:opacity-100"
+          >
+            Add
+          </a>
         </nav>
       </div>
     </motion.header>
