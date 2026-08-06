@@ -2,32 +2,26 @@
 
 Travel log: **https://gracurdy.github.io/Crunch/**
 
-## Why there are two apps
+## Live site
 
-| Location | What it is |
-|----------|------------|
-| `web/` | **New experience** — cinematic scroll galleries, Lenis, GSAP, MapLibre/globe |
-| Repo root (`app.js`, …) | **Classic SPA** — login + admin for saving trips/photos |
+The cinematic Next.js site is published to the **`gh-pages`** branch.
 
-GitHub Pages used to serve only the classic root SPA, so the new look never appeared on the live site. Deploying `web/` fixes that.
+### Pages setting (required)
 
-## Live site deploy
+**Settings → Pages → Build and deployment**
 
-Pushing to `main` runs [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml), which:
+1. Source: **Deploy from a branch**
+2. Branch: **`gh-pages`** / **`/` (root)**
+3. Save
 
-1. Builds the Next.js app with `NEXT_PUBLIC_BASE_PATH=/Crunch`
-2. Bundles classic admin at `/Crunch/classic/`
-3. Publishes to GitHub Pages
+Do **not** use “GitHub Actions” as the Pages source — that deploy path errored and left the old site up.
 
-### One-time Pages setting
+After saving, hard-refresh the site. You should see full-bleed trip heroes and scroll photo galleries.
 
-In the repo: **Settings → Pages → Build and deployment → Source → GitHub Actions**
+- Main site: https://gracurdy.github.io/Crunch/
+- Classic admin (add/edit trips): https://gracurdy.github.io/Crunch/classic/
 
-After that, the live site is the new scroll experience. Trip editing stays at:
-
-`https://gracurdy.github.io/Crunch/classic/#admin`
-
-## Local development
+## Develop locally
 
 ```bash
 cd web
@@ -35,18 +29,14 @@ npm install
 npm run dev
 ```
 
-Classic admin only:
+## How deploy works
 
-```bash
-python3 -m http.server 8080
-```
+Pushing to `main` runs `.github/workflows/deploy-pages.yml`, which builds `web/` and force-publishes to `gh-pages`.
 
 ## Sign in (classic admin)
 
-Password-only login. One-time token seal:
+Password-only. One-time token seal from the repo root:
 
 ```bash
 PASSWORD='your-password' TOKEN='your_fine_grained_token' node scripts/seal-secret.mjs
 ```
-
-See prior README notes for fine-grained token setup (Contents: Read and write on **Crunch** only).

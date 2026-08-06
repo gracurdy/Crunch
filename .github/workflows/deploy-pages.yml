@@ -6,16 +6,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,27 +41,13 @@ jobs:
           cp -R assets/. web/out/classic/assets/
           cp -R data/. web/out/classic/data/
           cp -R scripts/. web/out/classic/scripts/
-          # Classic SPA should resolve relative assets from /Crunch/classic/
-          python3 - <<'PY'
-          from pathlib import Path
-          html = Path('web/out/classic/index.html')
-          text = html.read_text()
-          # Ensure title matches brand if somehow stale in future copies
-          html.write_text(text)
-          print('classic admin bundled')
-          PY
+          touch web/out/.nojekyll
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: web/out
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: web/out
+          publish_branch: gh-pages
+          force_orphan: true
+          enable_jekyll: false
