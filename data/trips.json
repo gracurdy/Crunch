@@ -1,5 +1,31 @@
 [
   {
+    "id": "d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194",
+    "title": "Knoll Lake",
+    "country": "USA",
+    "city": "Tonto National Forest",
+    "startDate": "2026-08-07",
+    "endDate": "2026-08-08",
+    "lat": 34.4,
+    "lng": 111.08,
+    "summary": "Friday night trip to Knoll Lake near the Mogollon Rim with the homies to escape the heat!",
+    "notes": "So many dirt roads to take and the lake was refreshing.",
+    "cover": "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/01.jpg",
+    "photos": [
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/01.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/02.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/03.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/04.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/05.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/06.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/07.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/08.jpg",
+      "assets/photos/d867aa3a-7c7f-4721-a8eb-e4fdbc2c4194/09.jpg"
+    ],
+    "category": "grace-solo",
+    "featured": false
+  },
+  {
     "id": "6cfa652c-5317-497c-96ae-f0e348e002cc",
     "title": "Bartlett Lake Camping",
     "country": "USA",
