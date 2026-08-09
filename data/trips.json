@@ -6,8 +6,8 @@
     "city": "Cave Creek",
     "startDate": "2026-07-31",
     "endDate": "2026-08-01",
-    "lat": 0,
-    "lng": 0,
+    "lat": 33.8,
+    "lng": 111.6,
     "summary": "",
     "notes": "",
     "cover": "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/01.jpg",
@@ -22,7 +22,7 @@
       "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/08.jpg",
       "assets/photos/6cfa652c-5317-497c-96ae-f0e348e002cc/09.jpg"
     ],
-    "category": "together",
+    "category": "grace-solo",
     "featured": false
   },
   {
