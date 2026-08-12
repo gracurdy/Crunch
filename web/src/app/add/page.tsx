@@ -7,6 +7,7 @@ const emptyDraft = {
   title: "",
   country: "",
   city: "",
+  category: "together",
   featured: "false",
   startDate: "",
   endDate: "",
@@ -40,6 +41,7 @@ export default function AddTripPage() {
       title: draft.title,
       country: draft.country,
       city: draft.city,
+      category: draft.category,
       startDate: draft.startDate,
       endDate: draft.endDate || draft.startDate,
       lat: Number(draft.lat) || 0,
@@ -67,6 +69,7 @@ export default function AddTripPage() {
       title: trip.title,
       country: trip.country,
       city: trip.city,
+      category: trip.category || "together",
       featured: trip.featured ? "true" : "false",
       startDate: trip.startDate,
       endDate: trip.endDate,
@@ -139,6 +142,18 @@ export default function AddTripPage() {
                 onChange={(event) => handleChange("city", event.target.value)}
                 className="rounded-2xl border border-[var(--ink)]/10 bg-[var(--paper)] px-4 py-3 outline-none focus:border-[var(--accent)]"
               />
+            </label>
+            <label className="grid gap-2 text-sm">
+              <span className="text-[var(--muted)]">Category</span>
+              <select
+                value={draft.category}
+                onChange={(event) => handleChange("category", event.target.value)}
+                className="rounded-2xl border border-[var(--ink)]/10 bg-[var(--paper)] px-4 py-3 outline-none focus:border-[var(--accent)]"
+              >
+                <option value="together">Together</option>
+                <option value="grace-solo">Grace Solo Trip</option>
+                <option value="sean-solo">Sean Solo Trip</option>
+              </select>
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-[var(--muted)]">Featured trip</span>
