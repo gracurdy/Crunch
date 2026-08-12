@@ -43,12 +43,10 @@ jobs:
           cp -R assets/. web/out/classic/assets/
           cp -R data/. web/out/classic/data/
           cp -R scripts/. web/out/classic/scripts/
-          # Classic SPA should resolve relative assets from /Crunch/classic/
           python3 - <<'PY'
           from pathlib import Path
           html = Path('web/out/classic/index.html')
           text = html.read_text()
-          # Ensure title matches brand if somehow stale in future copies
           html.write_text(text)
           print('classic admin bundled')
           PY
