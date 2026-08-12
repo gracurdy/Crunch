@@ -22,6 +22,106 @@ const emptyDraft = {
   photos: [] as string[],
 };
 
+const GITHUB_REPO_OWNER = "gracurdy";
+const GITHUB_REPO_NAME = "Crunch";
+const GITHUB_TRIPS_PATH = "web/src/data/trips.json";
+const GITHUB_AUTH_SALT = "12XCypDOOn/WcjJvdtsNqA==";
+const GITHUB_AUTH_IV = "U5clPy8hnhXUCO+9";
+const GITHUB_SEALED_SECRET = "mi0cWfKmW0RK/YvyG7E5LT6sl9XF0OTsNH7EEx/sWtODD9ktw4LlpVezsPVqBF0AMx87LntWAdVCA19na20Rg/Jmi+i0MMvgNvyP4sICuh2+tKeD0+xltmuxHeWphZs9U1Ky9iOc+tCccSYtXg==";
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes: number[] = [];
+  for (let i = 0; i < binary.length; i += 1) bytes.push(binary.charCodeAt(i));
+  return new Uint8Array(bytes);
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+async function deriveKey(password: string, saltBytes: Uint8Array) {
+  const salt = toArrayBuffer(saltBytes);
+  const material = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 250000, hash: "SHA-256" },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+async function unsealSecret(password: string, authSalt: string, authIv: string, sealedSecret: string) {
+  const salt = toArrayBuffer(base64ToBytes(authSalt));
+  const iv = toArrayBuffer(base64ToBytes(authIv));
+  const key = await deriveKey(password, base64ToBytes(authSalt));
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, toArrayBuffer(base64ToBytes(sealedSecret)));
+  return new TextDecoder().decode(plain);
+}
+
+async function saveTripsToGitHub(nextTrips: typeof initialTrips) {
+  const token = await unsealSecret(ADMIN_PASSWORD, GITHUB_AUTH_SALT, GITHUB_AUTH_IV, GITHUB_SEALED_SECRET);
+  const fileRes = await fetch(
+    `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/contents/${GITHUB_TRIPS_PATH}`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    },
+  );
+
+  if (!fileRes.ok) {
+    const text = await fileRes.text();
+    throw new Error(text || "Could not load the trip data file for saving.");
+  }
+
+  const file = (await fileRes.json()) as { sha: string };
+  const content = JSON.stringify(nextTrips, null, 2) + "\n";
+  const encoded = bytesToBase64(new TextEncoder().encode(content));
+
+  const saveRes = await fetch(
+    `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/contents/${GITHUB_TRIPS_PATH}`,
+    {
+      method: "PUT",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: "Update trip data from admin",
+        content: encoded,
+        sha: file.sha,
+        branch: "main",
+      }),
+    },
+  );
+
+  if (!saveRes.ok) {
+    const text = await saveRes.text();
+    throw new Error(text || "Could not save the trip data to GitHub.");
+  }
+}
+
 export default function AddTripPage() {
   const [tripList, setTripList] = useState(initialTrips);
   const [draft, setDraft] = useState(emptyDraft);
@@ -63,7 +163,7 @@ export default function AddTripPage() {
     setPassword("");
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const photoUrls = Array.from(new Set((draft.photos.length ? draft.photos : draft.cover ? [draft.cover] : []).filter(Boolean)));
     const trip = {
@@ -83,14 +183,19 @@ export default function AddTripPage() {
       featured: draft.featured === "true",
     };
 
-    setTripList((current) => {
-      if (editingId) {
-        return current.map((item) => (item.id === editingId ? trip : item));
-      }
-      return [trip, ...current];
-    });
-    setDraft(emptyDraft);
-    setEditingId(null);
+    const nextTrips = editingId
+      ? tripList.map((item) => (item.id === editingId ? trip : item))
+      : [trip, ...tripList];
+
+    try {
+      await saveTripsToGitHub(nextTrips);
+      setTripList(nextTrips);
+      setDraft(emptyDraft);
+      setEditingId(null);
+      setError("");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save changes.");
+    }
   };
 
   const startEdit = (trip: (typeof initialTrips)[number]) => {
@@ -99,7 +204,7 @@ export default function AddTripPage() {
       title: trip.title,
       country: trip.country,
       city: trip.city,
-      category: trip.category || "Our Trips",
+      category: trip.category || "together",
       featured: trip.featured ? "true" : "false",
       startDate: trip.startDate,
       endDate: trip.endDate,
@@ -374,7 +479,16 @@ export default function AddTripPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTripList((current) => current.filter((item) => item.id !== trip.id))}
+                    onClick={async () => {
+                      const nextTrips = tripList.filter((item) => item.id !== trip.id);
+                      try {
+                        await saveTripsToGitHub(nextTrips);
+                        setTripList(nextTrips);
+                        setError("");
+                      } catch (saveError) {
+                        setError(saveError instanceof Error ? saveError.message : "Could not delete trip.");
+                      }
+                    }}
                     className="bg-red-50 px-3 py-2 text-xs text-red-700"
                   >
                     Delete
