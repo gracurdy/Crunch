@@ -9,12 +9,31 @@ import type { Trip } from "@/lib/trips";
 
 export function HomeView({ trips }: { trips: Trip[] }) {
   const [category, setCategory] = useState("all");
+  const [query, setQuery] = useState("");
+  const [date, setDate] = useState("");
+
   const heroImage = trips.find((t) => t.featured)?.cover || trips[0]?.cover;
-  const filtered = useMemo(
-    () =>
-      trips.filter((t) => category === "all" || (t.category || "together") === category),
-    [trips, category],
-  );
+
+  const filteredTrips = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return trips.filter((trip) => {
+      const matchesCategory =
+        category === "all" || (trip.category || "together") === category;
+      const matchesQuery =
+        !normalizedQuery ||
+        `${trip.title} ${trip.country} ${trip.city} ${trip.summary}`
+          .toLowerCase()
+          .includes(normalizedQuery);
+      const matchesDate =
+        !date ||
+        (trip.startDate <= date && (trip.endDate || trip.startDate) >= date);
+
+      return matchesCategory && matchesQuery && matchesDate;
+    });
+  }, [category, date, query, trips]);
+
+  const totalPhotos = trips.reduce((count, trip) => count + (trip.photos?.length || 0), 0);
 
   return (
     <main>
@@ -86,6 +105,66 @@ export function HomeView({ trips }: { trips: Trip[] }) {
         </div>
       </section>
 
+      <section className="px-5 pt-6 md:px-10">
+        <div className="grid gap-3 rounded-[28px] border border-white/70 bg-white/75 p-3 shadow-[0_20px_40px_rgba(17,25,42,0.08)] backdrop-blur md:grid-cols-[1.4fr_1fr_auto] md:items-end">
+          <label className="rounded-2xl bg-[var(--paper)] px-4 py-3">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Search trips
+            </span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Scotland, London, hiking…"
+              className="mt-2 w-full border-0 bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-[var(--muted)]"
+            />
+          </label>
+          <label className="rounded-2xl bg-[var(--paper)] px-4 py-3">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Find by date
+            </span>
+            <input
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="mt-2 w-full border-0 bg-transparent text-sm text-[var(--ink)] outline-none"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setDate("");
+            }}
+            className="bg-[var(--ink)] px-5 py-3 text-sm font-medium text-white"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-[24px] border border-white/70 bg-white/75 p-5 shadow-[0_12px_24px_rgba(17,25,42,0.06)]">
+            <div className="text-3xl font-semibold text-[var(--ink)]">{trips.length}</div>
+            <div className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              Trips saved
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-white/70 bg-white/75 p-5 shadow-[0_12px_24px_rgba(17,25,42,0.06)]">
+            <div className="text-3xl font-semibold text-[var(--ink)]">
+              {new Set(trips.map((trip) => trip.country)).size}
+            </div>
+            <div className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              Countries
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-white/70 bg-white/75 p-5 shadow-[0_12px_24px_rgba(17,25,42,0.06)]">
+            <div className="text-3xl font-semibold text-[var(--ink)]">{totalPhotos}</div>
+            <div className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              Photos collected
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="trips" className="px-5 py-24 md:px-10 md:py-32">
         <div className="mb-8">
           <h2 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl">
@@ -95,6 +174,7 @@ export function HomeView({ trips }: { trips: Trip[] }) {
             Filter by together adventures or solo side quests.
           </p>
         </div>
+
         <div className="mb-10 flex flex-wrap gap-2">
           <button
             type="button"
@@ -114,15 +194,18 @@ export function HomeView({ trips }: { trips: Trip[] }) {
             </button>
           ))}
         </div>
-        <div className="grid gap-6 md:grid-cols-2 md:gap-8">
-          {filtered.length ? (
-            filtered.map((trip, index) => (
+
+        {filteredTrips.length === 0 ? (
+          <div className="rounded-[28px] border border-[var(--ink)]/10 bg-white/60 p-10 text-center text-[var(--ink-soft)]">
+            No trips match that search.
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 md:gap-8">
+            {filteredTrips.map((trip, index) => (
               <TripCard key={trip.id} trip={trip} index={index} />
-            ))
-          ) : (
-            <p className="text-[var(--muted)] md:col-span-2">No trips in this category yet.</p>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

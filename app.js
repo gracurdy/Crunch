@@ -5,6 +5,11 @@ import { attachGlobe, flyHome, parkGlobe, zoomGlobe } from './map-globe.js';
 
 const SESSION_KEY = 'our-atlas-session';
 const AUTH_KEY = 'our-atlas-authed';
+const TIME_PEOPLE = [
+  { name: 'Sean', role: 'Pacific time', zone: 'America/Los_Angeles', city: 'Seattle' },
+  { name: 'Grace', role: 'Arizona time', zone: 'America/Phoenix', city: 'Phoenix' },
+  { name: 'Nick', role: 'Colorado time', zone: 'America/Denver', city: 'Denver' }
+];
 
 const TRIP_CATEGORIES = [
   { id: 'together', label: 'Together' },
@@ -29,7 +34,8 @@ function emptyDraft() {
     lng: '',
     summary: '',
     notes: '',
-    cover: ''
+    cover: '',
+    photos: []
   };
 }
 
@@ -40,6 +46,7 @@ const state = {
   query: '',
   date: '',
   category: 'all',
+  timeSlider: 17,
   authed: sessionStorage.getItem(AUTH_KEY) === '1' && !!sessionStorage.getItem(SESSION_KEY),
   status: '',
   statusType: '',
@@ -48,8 +55,6 @@ const state = {
   editingId: null,
   draft: emptyDraft()
 };
-
-let pendingPhotos = []; // { base64, ext, preview }
 
 function getSessionSecret() {
   return sessionStorage.getItem(SESSION_KEY) || '';
@@ -94,12 +99,26 @@ function captureDraftFromForm(form = document.querySelector('#trip-form')) {
 function resetEditor() {
   state.editingId = null;
   state.draft = emptyDraft();
-  pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
-  pendingPhotos = [];
+}
+
+function getUniquePhotoList(list = []) {
+  return [...new Set((list || []).filter(Boolean))];
+}
+
+function getDraftPhotos(draft = state.draft, fallback = []) {
+  const photos = getUniquePhotoList(draft.photos || []);
+  const cover = draft.cover || fallback[0] || '';
+  if (photos.length) {
+    if (cover && !photos.includes(cover)) return [cover, ...photos.filter(p => p !== cover)];
+    return photos;
+  }
+  if (cover) return [cover];
+  return [];
 }
 
 function startEditing(trip) {
   state.editingId = trip.id;
+  const photos = getUniquePhotoList(trip.photos || (trip.cover ? [trip.cover] : []));
   state.draft = {
     title: trip.title || '',
     country: trip.country || '',
@@ -112,10 +131,9 @@ function startEditing(trip) {
     lng: trip.lng === 0 || trip.lng ? String(trip.lng) : '',
     summary: trip.summary || '',
     notes: trip.notes || '',
-    cover: trip.cover || ''
+    cover: trip.cover || photos[0] || '',
+    photos
   };
-  pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
-  pendingPhotos = [];
   clearStatus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -166,6 +184,7 @@ function nav() {
     ['home', '⌂', 'Trips'],
     ['map', '◎', 'Map'],
     ['photos', '▦', 'Photos'],
+    ['time', '◔', 'Time'],
     [state.authed ? 'admin' : 'login', '＋', 'Add']
   ];
   return `<nav class="bottom-nav">${items
@@ -234,8 +253,75 @@ function mapView() {
 function photosView() {
   const all = state.trips.flatMap(t => (t.photos || []).map((src, i) => ({ src, trip: t, index: i })));
   return `<main class="page">${topbar('Every trip, all together')}${statusBanner()}
-    <section class="section"><div class="section-head"><div><h2>Photo map</h2><p>Browse memories by trip.</p></div><button class="primary-btn" data-route="${state.authed ? 'admin' : 'login'}">Upload photos</button></div>
+    <section class="section"><div class="section-head"><div><h2>Photo map</h2><p>Browse memories by trip.</p></div><button class="primary-btn" data-route="${state.authed ? 'admin' : 'login'}">Manage trips</button></div>
     <div class="photo-grid">${all.length ? all.map(p => `<button class="photo-tile" data-trip="${p.trip.id}"><img src="${p.src}" alt="${p.trip.title} photo" loading="lazy"><span>${p.trip.city}</span></button>`).join('') : '<div class="empty">No photos yet.</div>'}</div></section></main>`;
+}
+
+function getTimeZoneOffsetMinutes(timeZone, date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    timeZoneName: 'shortOffset',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const zoneName = parts.find(part => part.type === 'timeZoneName')?.value || 'GMT';
+  const match = zoneName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+  if (!match) return 0;
+  const sign = match[1] === '-' ? -1 : 1;
+  return sign * ((Number(match[2]) || 0) * 60 + (Number(match[3]) || 0));
+}
+
+function formatHour(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  const normalized = h % 12 || 12;
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  return `${normalized}:00 ${suffix}`;
+}
+
+function getLocalHourForPerson(person, selectedHour) {
+  const selectedOffset = getTimeZoneOffsetMinutes(person.zone);
+  const baseOffset = getTimeZoneOffsetMinutes('America/Los_Angeles');
+  const offsetDiff = (selectedOffset - baseOffset) / 60;
+  return ((selectedHour + offsetDiff) % 24 + 24) % 24;
+}
+
+function timeView() {
+  const overlapStart = 7;
+  const overlapEnd = 22;
+  const band = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+  const sliderValue = Number.isFinite(state.timeSlider) ? state.timeSlider : 17;
+  const selected = Math.max(0, Math.min(23, sliderValue));
+  return `<main class="page">${topbar('Time')}${statusBanner()}
+    <section class="section">
+      <div class="section-head"><div><h2>Family time</h2><p>Current timezone checks and the usual overlap window for normal awake hours.</p></div></div>
+      <div class="timezone-grid">${TIME_PEOPLE.map(person => {
+        const now = new Intl.DateTimeFormat('en-US', { timeZone: person.zone, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date());
+        const localHour = getLocalHourForPerson(person, selected);
+        return `<article class="timezone-card"><div class="timezone-header"><span class="timezone-role">${person.role}</span><h3>${person.name}</h3></div><div class="timezone-meta"><strong>${now}</strong><span>${person.city}</span></div><p>Timezone: ${person.zone}</p><div class="mini-hour"><span>At ${formatHour(selected)} in Sean’s time</span><strong>${formatHour(localHour)}</strong></div></article>`;
+      }).join('')}</div>
+    </section>
+
+    <section class="panel time-panel">
+      <div class="time-panel-head"><div><h3>Shared awake window</h3><p>Rough overlap for a normal day.</p></div><div class="time-chip">${formatHour(overlapStart)}–${formatHour(overlapEnd)}</div></div>
+      <div class="time-slider-wrap"><input id="time-slider" type="range" min="0" max="23" value="${selected}" /></div>
+      <div class="time-slider-label"><span>Selected hour</span><strong>${formatHour(selected)}</strong></div>
+      <div class="day-band" aria-label="Shared awake hours timeline">${band.map(hour => {
+        const active = hour >= overlapStart && hour <= overlapEnd;
+        return `<span class="day-slot ${active ? 'active' : ''}" title="${formatHour(hour)}">${hour % 2 === 0 ? '<small>' + hour + '</small>' : ''}</span>`;
+      }).join('')}</div>
+      <div class="person-bands">${TIME_PEOPLE.map(person => {
+        const localHour = getLocalHourForPerson(person, selected);
+        const start = 7;
+        const end = 22;
+        const left = ((start / 24) * 100).toFixed(2);
+        const width = (((end - start + 1) / 24) * 100).toFixed(2);
+        const marker = ((localHour / 24) * 100).toFixed(2);
+        return `<div class="person-band"><div class="person-band-label"><span>${person.name}</span><strong>${person.role}</strong></div><div class="band-track"><span class="band-fill" style="left:${left}%; width:${width}%"></span><span class="band-marker" style="left:${marker}%"></span></div></div>`;
+      }).join('')}</div>
+      <p class="note">This keeps the overlap idea simple: everyone usually has a roughly shared awake window from about ${formatHour(overlapStart)} to ${formatHour(overlapEnd)} in their local day.</p>
+    </section>
+  </main>`;
 }
 
 function loginView() {
@@ -253,13 +339,10 @@ function loginView() {
 function adminView() {
   const d = state.draft;
   const editing = !!state.editingId;
-  const existing = editing ? state.trips.find(t => t.id === state.editingId) : null;
-  const existingCount = existing?.photos?.length || 0;
-  const previews = pendingPhotos
-    .map(p => `<img class="upload-thumb" src="${p.preview}" alt="Selected photo preview">`)
-    .join('');
+  const existingPhotos = editing ? getDraftPhotos(d, state.trips.find(t => t.id === state.editingId)?.photos || []) : getDraftPhotos(d, []);
+  const photoList = existingPhotos.length ? existingPhotos : d.cover ? [d.cover] : [];
   return `<main class="page">${topbar('Private editing area')}${statusBanner()}
-    <section class="section"><div class="section-head"><div><h2>${editing ? 'Edit trip' : 'Add a memory'}</h2><p>${editing ? 'Update the details, then save. New photos are added to the ones already saved.' : 'New trips and photos appear on the site after you save.'}</p></div>
+    <section class="section"><div class="section-head"><div><h2>${editing ? 'Edit trip' : 'Add a trip'}</h2><p>${editing ? 'Update the trip details, add or remove photos, and pick the lead image.' : 'Create a trip card, choose the cover image, and manage the photo list.'}</p></div>
       <button class="soft-btn" id="logout-btn">Log out</button></div>
     <div class="admin-layout"><form class="panel form-grid" id="trip-form">
       <div class="form-grid two"><div class="admin-field"><label>Trip title</label><input name="title" required placeholder="Scotland road trip" value="${escAttr(d.title)}"></div><div class="admin-field"><label>Country</label><input name="country" required placeholder="Scotland" value="${escAttr(d.country)}"></div></div>
@@ -269,16 +352,23 @@ function adminView() {
       <div class="form-grid two"><div class="admin-field"><label>Latitude</label><input name="lat" type="number" step="any" placeholder="56.68" value="${escAttr(d.lat)}"></div><div class="admin-field"><label>Longitude</label><input name="lng" type="number" step="any" placeholder="-5.10" value="${escAttr(d.lng)}"></div></div>
       <div class="admin-field"><label>Short summary</label><textarea name="summary" placeholder="The description family sees on the trip card.">${escAttr(d.summary)}</textarea></div>
       <div class="admin-field"><label>Trip notes</label><textarea name="notes" placeholder="Favorite meals, funny moments, lodging, itinerary, links, costs…">${escAttr(d.notes)}</textarea></div>
-      <div class="admin-field"><label>Cover photo URL <span class="optional">(optional if you upload photos)</span></label><input name="cover" placeholder="Paste an image URL, or upload photos below" value="${escAttr(d.cover)}"></div>
-      <div class="upload-box" id="upload-box"><div><strong>Tap to choose photos</strong><p class="note">${editing && existingCount ? `${existingCount} photo${existingCount === 1 ? '' : 's'} already saved. New uploads will be added.` : 'Photos are resized before saving.'}</p><span id="upload-count">${pendingPhotos.length ? `${pendingPhotos.length} new photo${pendingPhotos.length === 1 ? '' : 's'} ready` : 'No new photos selected'}</span></div>
-        ${previews ? `<div class="upload-previews">${previews}</div>` : ''}
+      <div class="admin-field"><label>Cover photo URL</label><input name="cover" placeholder="Paste an image URL for the lead photo" value="${escAttr(d.cover)}"></div>
+      <div class="admin-field">
+        <label>Trip photos</label>
+        <div class="photo-manager">
+          <div class="photo-manager-list">${photoList.length ? photoList.map(src => `<div class="photo-manager-item ${d.cover === src ? 'lead' : ''}"><img src="${src}" alt="Trip photo"><div class="photo-manager-actions"><button type="button" class="soft-btn photo-lead" data-photo-action="lead" data-photo-url="${escAttr(src)}">${d.cover === src ? '★ Lead' : '☆ Make lead'}</button><button type="button" class="danger photo-remove" data-photo-action="remove" data-photo-url="${escAttr(src)}">Remove</button></div></div>`).join('') : '<div class="empty">No photos yet.</div>'}</div>
+          <div class="photo-manager-add">
+            <input id="photo-url-input" type="url" placeholder="Add a photo URL" />
+            <button type="button" class="primary-btn" id="add-photo-url">Add photo</button>
+          </div>
+        </div>
       </div>
       <div class="form-actions">
         <button class="primary-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving…' : editing ? 'Save changes' : 'Save trip'}</button>
         ${editing ? `<button type="button" class="soft-btn" id="cancel-edit" ${state.busy ? 'disabled' : ''}>Cancel edit</button>` : ''}
       </div>
     </form>
-    <aside class="panel"><h3>Saved trips</h3><p class="note">Edit a trip to change details or add more photos.</p><div class="admin-list">${state.trips
+    <aside class="panel"><h3>Saved trips</h3><p class="note">Edit a trip to change its details, cover image, or photo list.</p><div class="admin-list">${state.trips
       .map(
         t =>
           `<div class="admin-item"><img src="${t.cover}" alt=""><div><strong>${escAttr(t.title)}</strong><p>${escAttr(categoryLabel(t.category))} · ${escAttr(t.city)}, ${escAttr(t.country)} · ${fmtDate(t.startDate)} · ${(t.photos || []).length} photos</p></div><div class="admin-item-actions"><button class="soft-btn edit-btn" data-edit="${t.id}" ${state.busy ? 'disabled' : ''}>Edit</button><button class="danger" data-delete="${t.id}" ${state.busy ? 'disabled' : ''}>Delete</button></div></div>`
@@ -297,7 +387,7 @@ function tripModal(t) {
 
 function render() {
   const app = document.querySelector('#app');
-  const views = { home: homeView, map: mapView, photos: photosView, admin: adminView, login: loginView };
+  const views = { home: homeView, map: mapView, photos: photosView, time: timeView, admin: adminView, login: loginView };
   const shellClass = state.view === 'login' ? 'app-shell login-shell' : 'app-shell';
   app.innerHTML = `<div class="${shellClass}">${(views[state.view] || homeView)()}${nav()}${tripModal(state.selectedTrip)}</div>`;
   bind();
@@ -317,30 +407,6 @@ function render() {
   } else {
     parkGlobe();
   }
-}
-
-async function fileToCompressedJpeg(file) {
-  const bitmap = await createImageBitmap(file);
-  const maxWidth = 1600;
-  const scale = Math.min(1, maxWidth / bitmap.width);
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
-  bitmap.close?.();
-
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not compress image'))), 'image/jpeg', 0.85);
-  });
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  const base64 = btoa(binary);
-  const preview = URL.createObjectURL(blob);
-  return { base64, ext: 'jpg', preview };
 }
 
 async function persistTrips(nextTrips, files, message) {
@@ -364,6 +430,44 @@ function bind() {
   document.querySelectorAll('[data-route]').forEach(el =>
     el.addEventListener('click', () => route(el.dataset.route))
   );
+
+  document.querySelector('#time-slider')?.addEventListener('input', e => {
+    state.timeSlider = Number(e.target.value || 0);
+    render();
+  });
+
+  document.querySelector('#add-photo-url')?.addEventListener('click', () => {
+    const input = document.querySelector('#photo-url-input');
+    const url = String(input?.value || '').trim();
+    if (!url) {
+      setStatus('Paste a photo URL before adding it.', 'error');
+      render();
+      return;
+    }
+    state.draft.photos = getUniquePhotoList([...(state.draft.photos || []), url]);
+    if (!state.draft.cover) state.draft.cover = url;
+    clearStatus();
+    render();
+    if (input) input.value = '';
+  });
+
+  document.querySelectorAll('[data-photo-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.photoAction;
+      const url = String(btn.dataset.photoUrl || '');
+      if (!url) return;
+      if (action === 'remove') {
+        state.draft.photos = getUniquePhotoList((state.draft.photos || []).filter(item => item !== url));
+        if (state.draft.cover === url) {
+          state.draft.cover = state.draft.photos[0] || '';
+        }
+      }
+      if (action === 'lead') {
+        state.draft.cover = url;
+      }
+      render();
+    });
+  });
   document.querySelectorAll('[data-trip]').forEach(el =>
     el.addEventListener('click', e => {
       e.stopPropagation();
@@ -464,39 +568,6 @@ function bind() {
     })
   );
 
-  document.querySelector('#upload-box')?.addEventListener('click', e => {
-    if (e.target.closest('img')) return;
-    document.querySelector('#photo-picker').click();
-  });
-
-  const picker = document.querySelector('#photo-picker');
-  if (picker && picker.dataset.bound !== '1') {
-    picker.dataset.bound = '1';
-    picker.addEventListener('change', async e => {
-      const files = [...e.target.files];
-      if (!files.length) return;
-      captureDraftFromForm();
-      setStatus(`Preparing ${files.length} photo${files.length === 1 ? '' : 's'}…`, 'info');
-      state.busy = true;
-      render();
-      try {
-        const prepared = [];
-        for (const file of files) {
-          if (!file.type.startsWith('image/')) continue;
-          prepared.push(await fileToCompressedJpeg(file));
-        }
-        pendingPhotos = prepared;
-        if (!prepared.length) throw new Error('No image files were selected.');
-        setStatus(`${prepared.length} photo${prepared.length === 1 ? '' : 's'} ready to save with the trip.`, 'success');
-      } catch (err) {
-        setStatus(err.message || 'Could not prepare photos.', 'error');
-      }
-      state.busy = false;
-      e.target.value = '';
-      render();
-    });
-  }
-
   document.querySelector('#trip-form')?.addEventListener('submit', async e => {
     e.preventDefault();
     if (state.busy) return;
@@ -512,21 +583,10 @@ function bind() {
     }
 
     const tripId = editing ? existing.id : crypto.randomUUID();
-    const photoFiles = [];
-    const newPhotoPaths = [];
-    const startIndex = editing ? existing.photos?.length || 0 : 0;
-
-    pendingPhotos.forEach((photo, index) => {
-      const path = `${CONFIG.photosDir}/${tripId}/${String(startIndex + index + 1).padStart(2, '0')}.${photo.ext}`;
-      photoFiles.push({ path, content: photo.base64, encoding: 'base64' });
-      newPhotoPaths.push(path);
-    });
-
-    const existingPhotos = editing ? existing.photos || [] : [];
-    const photos = [...existingPhotos, ...newPhotoPaths];
-    const cover = data.cover || newPhotoPaths[0] || existing?.cover || '';
-    if (!cover && !photos.length) {
-      setStatus('Add a cover URL or upload at least one photo.', 'error');
+    const photoList = getDraftPhotos(state.draft, editing ? existing?.photos || [] : []);
+    const cover = data.cover || photoList[0] || existing?.cover || '';
+    if (!cover) {
+      setStatus('Add a cover image URL or a photo for the trip.', 'error');
       render();
       return;
     }
@@ -542,8 +602,8 @@ function bind() {
       lng: Number(data.lng) || 0,
       summary: data.summary || '',
       notes: data.notes || '',
-      cover: cover || photos[0] || '',
-      photos: photos.length ? photos : cover ? [cover] : [],
+      cover: cover || photoList[0] || '',
+      photos: photoList.length ? photoList : cover ? [cover] : [],
       category: TRIP_CATEGORIES.some(c => c.id === data.category) ? data.category : 'together',
       featured: data.featured === 'true'
     };
@@ -556,7 +616,7 @@ function bind() {
     setStatus('Saving…', 'info');
     render();
     try {
-      await persistTrips(nextTrips, photoFiles, `${editing ? 'Update' : 'Add'} trip: ${trip.title}`);
+      await persistTrips(nextTrips, [], `${editing ? 'Update' : 'Add'} trip: ${trip.title}`);
       resetEditor();
       setStatus(
         editing
