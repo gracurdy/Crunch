@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trips as initialTrips } from "@/lib/trips";
+
+const ADMIN_PASSWORD = "clarity";
+const ADMIN_SESSION_KEY = "crunch-admin-auth";
 
 const emptyDraft = {
   title: "",
@@ -23,6 +26,14 @@ export default function AddTripPage() {
   const [tripList, setTripList] = useState(initialTrips);
   const [draft, setDraft] = useState(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const saved = window.sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
+    setIsUnlocked(saved);
+  }, []);
 
   const photoList = useMemo(() => {
     const list = Array.from(new Set([...draft.photos, ...(draft.cover ? [draft.cover] : [])]));
@@ -31,6 +42,25 @@ export default function AddTripPage() {
 
   const handleChange = (field: keyof typeof emptyDraft, value: string | string[]) => {
     setDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const unlockAdmin = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      window.sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
+      setIsUnlocked(true);
+      setError("");
+      setPassword("");
+      return;
+    }
+    setError("Wrong password.");
+  };
+
+  const logOut = () => {
+    window.sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    setIsUnlocked(false);
+    setError("");
+    setPassword("");
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -69,7 +99,7 @@ export default function AddTripPage() {
       title: trip.title,
       country: trip.country,
       city: trip.city,
-      category: trip.category || "together",
+      category: trip.category || "Our Trips",
       featured: trip.featured ? "true" : "false",
       startDate: trip.startDate,
       endDate: trip.endDate,
@@ -105,13 +135,43 @@ export default function AddTripPage() {
     if (input) input.value = "";
   };
 
+  if (!isUnlocked) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-5 py-10">
+        <form onSubmit={unlockAdmin} className="w-full max-w-md rounded-[28px] border border-[var(--ink)]/10 bg-white p-6 shadow-[0_18px_40px_rgba(17,25,42,0.08)] md:p-8">
+          <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">Trip admin</p>
+          <h1 className="mt-4 font-[family-name:var(--font-display)] text-4xl md:text-5xl">Sign in</h1>
+          <label className="mt-6 grid gap-2 text-sm">
+            <span className="text-[var(--muted)]">Password</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoFocus
+              className="rounded-2xl border border-[var(--ink)]/10 bg-[var(--paper)] px-4 py-3 outline-none focus:border-[var(--accent)]"
+            />
+          </label>
+          {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+          <button type="submit" className="mt-6 w-full rounded-2xl bg-[var(--ink)] px-4 py-3 text-sm font-medium text-white">
+            Unlock admin
+          </button>
+        </form>
+      </main>
+    );
+  }
+
   return (
     <main className="px-5 pb-28 pt-32 md:px-10">
-      <div className="mb-10">
-        <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">Trip admin</p>
-        <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl md:text-7xl">
-          {editingId ? "Edit trip" : "Add trip"}
-        </h1>
+      <div className="mb-10 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">Trip admin</p>
+          <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl md:text-7xl">
+            {editingId ? "Edit trip" : "Add trip"}
+          </h1>
+        </div>
+        <button type="button" onClick={logOut} className="rounded-2xl border border-[var(--ink)]/10 bg-white px-4 py-2 text-sm">
+          Log out
+        </button>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
@@ -150,9 +210,9 @@ export default function AddTripPage() {
                 onChange={(event) => handleChange("category", event.target.value)}
                 className="rounded-2xl border border-[var(--ink)]/10 bg-[var(--paper)] px-4 py-3 outline-none focus:border-[var(--accent)]"
               >
-                <option value="together">Together</option>
-                <option value="grace-solo">Grace Solo Trip</option>
-                <option value="sean-solo">Sean Solo Trip</option>
+                <option value="together">Our Trips</option>
+                <option value="grace-solo">Grace's Trips</option>
+                <option value="sean-solo">Sean's Trips</option>
               </select>
             </label>
             <label className="grid gap-2 text-sm">
