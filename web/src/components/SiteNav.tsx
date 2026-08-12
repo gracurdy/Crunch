@@ -11,6 +11,7 @@ const links = [
   { href: "/photos", label: "Photos" },
   { href: "/map", label: "Map" },
   { href: "/time", label: "Time" },
+  { href: "/add", label: "Add" },
 ];
 
 export function SiteNav() {
