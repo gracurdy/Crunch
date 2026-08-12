@@ -11,7 +11,6 @@ const links = [
   { href: "/photos", label: "Photos" },
   { href: "/map", label: "Map" },
   { href: "/time", label: "Time" },
-  { href: "/add", label: "Add" },
 ];
 
 export function SiteNav() {
@@ -79,12 +78,6 @@ export function SiteNav() {
               </Link>
             );
           })}
-          <a
-            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/classic/`}
-            className="opacity-55 transition-opacity hover:opacity-100"
-          >
-            Add
-          </a>
         </nav>
       </div>
     </motion.header>
